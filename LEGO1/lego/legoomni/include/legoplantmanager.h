@@ -32,7 +32,7 @@ public:
 	const char* ClassName() const override // vtable+0x0c
 	{
 		// While this class exists in BETA10, it didn't have a ClassName().
-		// I suppose it did not inherit from MxCore back then and likely did not have a VTABLE.
+		// The constructor suggests that it did not inherit from MxCore back then and did not have a VTABLE.
 		// STRING: LEGO1 0x100f318c
 		return "LegoPlantManager";
 	}
@@ -49,12 +49,12 @@ public:
 	MxBool SwitchMove(LegoEntity* p_entity);
 	MxBool SwitchMood(LegoEntity* p_entity);
 	MxU32 GetAnimationId(LegoEntity* p_entity);
-	MxU32 GetSoundId(LegoEntity* p_entity, MxBool p_state);
+	MxU32 GetSoundId(LegoEntity* p_entity, MxBool p_basedOnMood);
 	LegoPlantInfo* GetInfoArray(MxS32& p_length);
 	LegoEntity* CreatePlant(MxS32 p_index, LegoWorld* p_world, LegoOmni::World p_worldId);
 	MxBool DecrementCounter(LegoEntity* p_entity);
 	void ScheduleAnimation(LegoEntity* p_entity, MxLong p_length);
-	MxResult FUN_10026410();
+	MxResult DetermineBoundaries();
 	void ClearCounters();
 	void SetInitialCounters();
 
@@ -77,11 +77,11 @@ private:
 	static MxS32 g_maxMove[4];
 	static MxU32 g_maxSound;
 
-	LegoOmni::World m_worldId; // 0x08
-	undefined m_unk0x0c;       // 0x0c
-	AnimEntry* m_entries[5];   // 0x10
-	MxS8 m_numEntries;         // 0x24
-	LegoWorld* m_world;        // 0x28
+	LegoOmni::World m_worldId;     // 0x08
+	MxBool m_boundariesDetermined; // 0x0c
+	AnimEntry* m_entries[5];       // 0x10
+	MxS8 m_numEntries;             // 0x24
+	LegoWorld* m_world;            // 0x28
 };
 
 #endif // LEGOPLANTMANAGER_H

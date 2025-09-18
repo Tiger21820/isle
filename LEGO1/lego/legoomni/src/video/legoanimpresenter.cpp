@@ -3,6 +3,7 @@
 #include "3dmanager/lego3dmanager.h"
 #include "anim/legoanim.h"
 #include "define.h"
+#include "legoanimactor.h"
 #include "legoanimationmanager.h"
 #include "legoanimmmpresenter.h"
 #include "legocameracontroller.h"
@@ -27,6 +28,10 @@
 #include "viewmanager/viewmanager.h"
 
 DECOMP_SIZE_ASSERT(LegoAnimPresenter, 0xbc)
+DECOMP_SIZE_ASSERT(LegoLoopingAnimPresenter, 0xc0)
+DECOMP_SIZE_ASSERT(LegoLocomotionAnimPresenter, 0xd8)
+DECOMP_SIZE_ASSERT(LegoHideAnimPresenter, 0xc4)
+DECOMP_SIZE_ASSERT(LegoHideAnimStruct, 0x08)
 
 // FUNCTION: LEGO1 0x10068420
 // FUNCTION: BETA10 0x1004e5f0
@@ -47,8 +52,8 @@ void LegoAnimPresenter::Init()
 	m_anim = NULL;
 	m_roiMap = NULL;
 	m_roiMapSize = 0;
-	m_unk0x74 = NULL;
-	m_unk0x70 = NULL;
+	m_managedActors = NULL;
+	m_sceneROIs = NULL;
 	m_unk0x78 = NULL;
 	m_flags = 0;
 	m_unk0xa8.Clear();
@@ -81,13 +86,13 @@ void LegoAnimPresenter::Destroy(MxBool p_fromDestructor)
 			delete[] m_roiMap;
 		}
 
-		if (m_unk0x70 != NULL) {
-			delete m_unk0x70;
+		if (m_sceneROIs != NULL) {
+			delete m_sceneROIs;
 		}
 
-		if (m_unk0x74 != NULL) {
+		if (m_managedActors != NULL) {
 			FUN_1006aa60();
-			delete m_unk0x74;
+			delete m_managedActors;
 		}
 
 		if (m_unk0x78 != NULL) {
@@ -214,17 +219,17 @@ LegoChar* LegoAnimPresenter::FUN_10069150(const LegoChar* p_und1)
 // FUNCTION: LEGO1 0x100692b0
 void LegoAnimPresenter::FUN_100692b0()
 {
-	m_unk0x74 = new LegoROIList();
+	m_managedActors = new LegoROIList();
 
-	if (m_unk0x74) {
+	if (m_managedActors) {
 		LegoU32 numActors = m_anim->GetNumActors();
 
 		for (LegoU32 i = 0; i < numActors; i++) {
-			LegoChar* str = FUN_100697c0(m_anim->GetActorName(i), NULL);
-			undefined4 unk0x04 = m_anim->GetActorUnknown0x04(i);
+			LegoChar* str = GetVariableOrIdentity(m_anim->GetActorName(i), NULL);
+			LegoU32 actorType = m_anim->GetActorType(i);
 			LegoROI* roi = NULL;
 
-			if (unk0x04 == 2) {
+			if (actorType == LegoAnimActorEntry::e_actorType2) {
 				LegoChar* src;
 				if (str[0] == '*') {
 					src = str + 1;
@@ -239,7 +244,7 @@ void LegoAnimPresenter::FUN_100692b0()
 					roi->SetVisibility(FALSE);
 				}
 			}
-			else if (unk0x04 == 4) {
+			else if (actorType == LegoAnimActorEntry::e_actorType4) {
 				LegoChar* baseName = new LegoChar[strlen(str)];
 				strcpy(baseName, str + 1);
 				strlwr(baseName);
@@ -254,7 +259,7 @@ void LegoAnimPresenter::FUN_100692b0()
 				delete[] baseName;
 				delete[] und;
 			}
-			else if (unk0x04 == 3) {
+			else if (actorType == LegoAnimActorEntry::e_actorType3) {
 				LegoChar* lodName = new LegoChar[strlen(str)];
 				strcpy(lodName, str + 1);
 
@@ -280,7 +285,7 @@ void LegoAnimPresenter::FUN_100692b0()
 			}
 
 			if (roi != NULL) {
-				m_unk0x74->Append(roi);
+				m_managedActors->Append(roi);
 			}
 
 			delete[] str;
@@ -292,17 +297,17 @@ void LegoAnimPresenter::FUN_100692b0()
 // FUNCTION: BETA10 0x1004f359
 void LegoAnimPresenter::FUN_100695c0()
 {
-	m_unk0x70 = new LegoROIList();
+	m_sceneROIs = new LegoROIList();
 
-	if (m_unk0x70) {
+	if (m_sceneROIs) {
 		const CompoundObject& rois = VideoManager()->Get3DManager()->GetLego3DView()->GetViewManager()->GetROIs();
 		LegoU32 numActors = m_anim->GetNumActors();
 
 		for (LegoU32 i = 0; i < numActors; i++) {
 			if (FUN_100698b0(rois, m_anim->GetActorName(i)) == FALSE) {
-				undefined4 unk0x04 = m_anim->GetActorUnknown0x04(i);
+				LegoU32 actorType = m_anim->GetActorType(i);
 
-				if (unk0x04 == 5 || unk0x04 == 6) {
+				if (actorType == LegoAnimActorEntry::e_actorType5 || actorType == LegoAnimActorEntry::e_actorType6) {
 					LegoChar lodName[256];
 					const LegoChar* actorName = m_anim->GetActorName(i);
 
@@ -324,23 +329,23 @@ void LegoAnimPresenter::FUN_100695c0()
 }
 
 // FUNCTION: LEGO1 0x100697c0
-LegoChar* LegoAnimPresenter::FUN_100697c0(const LegoChar* p_und1, const LegoChar* p_und2)
+LegoChar* LegoAnimPresenter::GetVariableOrIdentity(const LegoChar* p_varName, const LegoChar* p_prefix)
 {
-	const LegoChar* str = p_und1;
-	const char* var = VariableTable()->GetVariable(p_und1);
+	const LegoChar* str = p_varName;
+	const char* var = VariableTable()->GetVariable(p_varName);
 
 	if (*var) {
 		str = var;
 	}
 
-	LegoU32 len = strlen(str) + (p_und2 ? strlen(p_und2) : 0) + 2;
+	LegoU32 len = strlen(str) + (p_prefix ? strlen(p_prefix) : 0) + 2;
 	LegoChar* result = new LegoChar[len];
 
 	if (result != NULL) {
 		*result = '\0';
 
-		if (p_und2) {
-			strcpy(result, p_und2);
+		if (p_prefix) {
+			strcpy(result, p_prefix);
 			strcat(result, ":");
 		}
 
@@ -356,7 +361,7 @@ LegoBool LegoAnimPresenter::FUN_100698b0(const CompoundObject& p_rois, const Leg
 	LegoBool result = FALSE;
 
 	LegoChar* str;
-	if (*(str = FUN_100697c0(p_und2, NULL)) == '*') {
+	if (*(str = GetVariableOrIdentity(p_und2, NULL)) == '*') {
 		LegoChar* tmp = FUN_10069150(str);
 		delete[] str;
 		str = tmp;
@@ -369,7 +374,7 @@ LegoBool LegoAnimPresenter::FUN_100698b0(const CompoundObject& p_rois, const Leg
 
 			if (name != NULL) {
 				if (!strcmpi(name, str)) {
-					m_unk0x70->Append(roi);
+					m_sceneROIs->Append(roi);
 					result = TRUE;
 					break;
 				}
@@ -382,20 +387,20 @@ LegoBool LegoAnimPresenter::FUN_100698b0(const CompoundObject& p_rois, const Leg
 }
 
 // FUNCTION: LEGO1 0x100699e0
-LegoROI* LegoAnimPresenter::FUN_100699e0(const LegoChar* p_und)
+LegoROI* LegoAnimPresenter::FindROI(const LegoChar* p_name)
 {
-	LegoROIListCursor cursor(m_unk0x70);
+	LegoROIListCursor cursor(m_sceneROIs);
 	LegoROI* roi;
 
 	while (cursor.Next(roi)) {
-		LegoChar* und = FUN_100697c0(roi->GetName(), NULL);
+		LegoChar* nameOrVar = GetVariableOrIdentity(roi->GetName(), NULL);
 
-		if (und != NULL && !strcmpi(und, p_und)) {
-			delete[] und;
+		if (nameOrVar != NULL && !strcmpi(nameOrVar, p_name)) {
+			delete[] nameOrVar;
 			return roi;
 		}
 
-		delete[] und;
+		delete[] nameOrVar;
 	}
 
 	return NULL;
@@ -410,7 +415,7 @@ void LegoAnimPresenter::FUN_10069b10()
 		memset(m_unk0x8c, 0, m_unk0x94 * sizeof(*m_unk0x8c));
 	}
 
-	FUN_1006a3c0(anims, m_anim->GetRoot(), NULL);
+	UpdateStructMapAndROIIndex(anims, m_anim->GetRoot(), NULL);
 
 	if (m_roiMap != NULL) {
 		delete[] m_roiMap;
@@ -443,7 +448,7 @@ void LegoAnimPresenter::FUN_10069b10()
 }
 
 // FUNCTION: LEGO1 0x1006a3c0
-void LegoAnimPresenter::FUN_1006a3c0(LegoAnimStructMap& p_map, LegoTreeNode* p_node, LegoROI* p_roi)
+void LegoAnimPresenter::UpdateStructMapAndROIIndex(LegoAnimStructMap& p_map, LegoTreeNode* p_node, LegoROI* p_roi)
 {
 	LegoROI* roi = p_roi;
 	LegoChar* und = NULL;
@@ -456,27 +461,27 @@ void LegoAnimPresenter::FUN_1006a3c0(LegoAnimStructMap& p_map, LegoTreeNode* p_n
 			name = und2 = FUN_10069150(name);
 		}
 
-		und = FUN_100697c0(name, p_roi != NULL ? p_roi->GetName() : NULL);
+		und = GetVariableOrIdentity(name, p_roi != NULL ? p_roi->GetName() : NULL);
 
 		if (p_roi == NULL) {
-			roi = FUN_100699e0(und);
+			roi = FindROI(und);
 
 			if (roi != NULL) {
-				FUN_1006a4f0(p_map, data, und, roi);
+				UpdateStructMapAndROIIndexForNode(p_map, data, und, roi);
 			}
 			else {
-				data->SetUnknown0x20(0);
+				data->SetROIIndex(0);
 			}
 		}
 		else {
 			LegoROI* child = p_roi->FindChildROI(name, p_roi);
 
 			if (child != NULL) {
-				FUN_1006a4f0(p_map, data, und, child);
+				UpdateStructMapAndROIIndexForNode(p_map, data, und, child);
 			}
 			else {
-				if (FUN_100699e0(name) != NULL) {
-					FUN_1006a3c0(p_map, p_node, NULL);
+				if (FindROI(name) != NULL) {
+					UpdateStructMapAndROIIndex(p_map, p_node, NULL);
 					delete[] und;
 					delete[] und2;
 					return;
@@ -490,12 +495,12 @@ void LegoAnimPresenter::FUN_1006a3c0(LegoAnimStructMap& p_map, LegoTreeNode* p_n
 
 	MxS32 count = p_node->GetNumChildren();
 	for (MxS32 i = 0; i < count; i++) {
-		FUN_1006a3c0(p_map, p_node->GetChild(i), roi);
+		UpdateStructMapAndROIIndex(p_map, p_node->GetChild(i), roi);
 	}
 }
 
 // FUNCTION: LEGO1 0x1006a4f0
-void LegoAnimPresenter::FUN_1006a4f0(
+void LegoAnimPresenter::UpdateStructMapAndROIIndexForNode(
 	LegoAnimStructMap& p_map,
 	LegoAnimNodeData* p_data,
 	const LegoChar* p_und,
@@ -510,7 +515,7 @@ void LegoAnimPresenter::FUN_1006a4f0(
 		animStruct.m_index = p_map.size() + 1;
 		animStruct.m_roi = p_roi;
 
-		p_data->SetUnknown0x20(animStruct.m_index);
+		p_data->SetROIIndex(animStruct.m_index);
 
 		LegoChar* und = new LegoChar[strlen(p_und) + 1];
 		strcpy(und, p_und);
@@ -518,7 +523,7 @@ void LegoAnimPresenter::FUN_1006a4f0(
 		p_map[und] = animStruct;
 	}
 	else {
-		p_data->SetUnknown0x20((*it).second.m_index);
+		p_data->SetROIIndex((*it).second.m_index);
 	}
 }
 
@@ -526,7 +531,7 @@ void LegoAnimPresenter::FUN_1006a4f0(
 // FUNCTION: BETA10 0x1004feee
 void LegoAnimPresenter::FUN_1006aa60()
 {
-	LegoROIListCursor cursor(m_unk0x74);
+	LegoROIListCursor cursor(m_managedActors);
 	LegoROI* roi;
 
 	while (cursor.Next(roi)) {
@@ -542,10 +547,10 @@ void LegoAnimPresenter::FUN_1006aa60()
 void LegoAnimPresenter::FUN_1006ab70()
 {
 	if (m_unk0x96) {
-		AnimationManager()->FUN_10063270(m_unk0x74, this);
+		AnimationManager()->FUN_10063270(m_managedActors, this);
 	}
 	else {
-		AnimationManager()->FUN_10063780(m_unk0x74);
+		AnimationManager()->FUN_10063780(m_managedActors);
 	}
 }
 
@@ -565,10 +570,10 @@ MxBool LegoAnimPresenter::FUN_1006abb0(LegoTreeNode* p_node, LegoROI* p_roi)
 	MxS32 i, count;
 
 	if (name != NULL && *name != '-') {
-		und = FUN_100697c0(name, p_roi != NULL ? p_roi->GetName() : NULL);
+		und = GetVariableOrIdentity(name, p_roi != NULL ? p_roi->GetName() : NULL);
 
 		if (p_roi == NULL) {
-			roi = FUN_100699e0(und);
+			roi = FindROI(und);
 
 			if (roi == NULL) {
 				goto done;
@@ -578,7 +583,7 @@ MxBool LegoAnimPresenter::FUN_1006abb0(LegoTreeNode* p_node, LegoROI* p_roi)
 			LegoROI* child = p_roi->FindChildROI(name, p_roi);
 
 			if (child == NULL) {
-				if (FUN_100699e0(name) != NULL) {
+				if (FindROI(name) != NULL) {
 					if (FUN_1006abb0(p_node, NULL)) {
 						result = TRUE;
 					}
@@ -703,11 +708,14 @@ MxResult LegoAnimPresenter::FUN_1006b140(LegoROI* p_roi)
 	if (p_roi == NULL) {
 		return FAILURE;
 	}
+#ifdef BETA10
+	MxMatrix unused_matrix;
+#endif
 
 	Matrix4* mn = new MxMatrix();
 	assert(mn);
 
-	MxMatrix local58;
+	MxMatrix inverse;
 	const Matrix4& local2world = p_roi->GetLocal2World();
 	MxMatrix* local5c;
 	MxU32 i;
@@ -718,7 +726,7 @@ MxResult LegoAnimPresenter::FUN_1006b140(LegoROI* p_roi)
 
 	for (i = 1; i <= m_roiMapSize; i++) {
 		if (m_roiMap[i] == p_roi) {
-			if (local5c[i].BETA_1005a590(local58) != SUCCESS) {
+			if (local5c[i].Invert(inverse) != SUCCESS) {
 				goto done;
 			}
 
@@ -727,7 +735,7 @@ MxResult LegoAnimPresenter::FUN_1006b140(LegoROI* p_roi)
 	}
 
 	{
-		mn->Product(local58, local2world);
+		mn->Product(inverse, local2world);
 		SetUnknown0xa0(mn);
 		delete[] local5c;
 		SetUnknown0x0cTo1();
@@ -790,7 +798,7 @@ void LegoAnimPresenter::StartingTickle()
 	}
 
 	FUN_10069b10();
-	FUN_1006c8a0(TRUE);
+	SetDisabled(TRUE);
 
 	if (m_unk0x78 == NULL) {
 		if (fabs(m_action->GetDirection()[0]) >= 0.00000047683716F ||
@@ -815,7 +823,7 @@ void LegoAnimPresenter::StartingTickle()
 		m_compositePresenter->VTable0x60(this);
 	}
 	else {
-		m_action->SetUnknown90(Timer()->GetTime());
+		m_action->SetTimeStarted(Timer()->GetTime());
 	}
 
 	ProgressTickleState(e_streaming);
@@ -828,9 +836,9 @@ void LegoAnimPresenter::StartingTickle()
 	VTable0x8c();
 
 done:
-	if (m_unk0x70 != NULL) {
-		delete m_unk0x70;
-		m_unk0x70 = NULL;
+	if (m_sceneROIs != NULL) {
+		delete m_sceneROIs;
+		m_sceneROIs = NULL;
 	}
 }
 
@@ -893,7 +901,7 @@ void LegoAnimPresenter::FUN_1006b900(LegoAnim* p_anim, MxLong p_time, Matrix4* p
 		mat = *p_matrix;
 	}
 	else {
-		LegoROI* roi = m_roiMap[data->GetUnknown0x20()];
+		LegoROI* roi = m_roiMap[data->GetROIIndex()];
 
 		if (roi != NULL) {
 			mat = roi->GetLocal2World();
@@ -903,7 +911,7 @@ void LegoAnimPresenter::FUN_1006b900(LegoAnim* p_anim, MxLong p_time, Matrix4* p
 		}
 	}
 
-	LegoROI::FUN_100a8fd0(root, mat, p_time, m_roiMap);
+	LegoROI::ApplyTransform(root, mat, p_time, m_roiMap);
 }
 
 // FUNCTION: LEGO1 0x1006b9a0
@@ -918,7 +926,7 @@ void LegoAnimPresenter::FUN_1006b9a0(LegoAnim* p_anim, MxLong p_time, Matrix4* p
 		mat = *p_matrix;
 	}
 	else {
-		LegoROI* roi = m_roiMap[data->GetUnknown0x20()];
+		LegoROI* roi = m_roiMap[data->GetROIIndex()];
 
 		if (roi != NULL) {
 			mat = roi->GetLocal2World();
@@ -930,14 +938,14 @@ void LegoAnimPresenter::FUN_1006b9a0(LegoAnim* p_anim, MxLong p_time, Matrix4* p
 
 	if (p_anim->GetCamAnim() != NULL) {
 		MxMatrix transform(mat);
-		p_anim->GetCamAnim()->FUN_1009f490(p_time, transform);
+		p_anim->GetCamAnim()->CalculateCameraTransform(p_time, transform);
 
 		if (m_currentWorld != NULL && m_currentWorld->GetCameraController() != NULL) {
-			m_currentWorld->GetCameraController()->FUN_100123e0(transform, 0);
+			m_currentWorld->GetCameraController()->TransformPointOfView(transform, FALSE);
 		}
 	}
 
-	LegoROI::FUN_100a8e80(root, mat, p_time, m_roiMap);
+	LegoROI::ApplyAnimationTransformation(root, mat, p_time, m_roiMap);
 }
 
 // FUNCTION: LEGO1 0x1006bac0
@@ -1090,7 +1098,7 @@ void LegoAnimPresenter::EndAction()
 		}
 	}
 
-	FUN_1006c8a0(FALSE);
+	SetDisabled(FALSE);
 	FUN_1006ab70();
 	VTable0x90();
 
@@ -1128,7 +1136,7 @@ void LegoAnimPresenter::VTable0x8c()
 	}
 
 	if (m_currentWorld) {
-		m_currentWorld->FUN_1001fda0(this);
+		m_currentWorld->AddPresenterIfInRange(this);
 		if (!m_compositePresenter || !m_compositePresenter->IsA("LegoAnimMMPresenter")) {
 			m_currentWorld->Add(this);
 		}
@@ -1140,7 +1148,7 @@ void LegoAnimPresenter::VTable0x8c()
 void LegoAnimPresenter::VTable0x90()
 {
 	if (m_currentWorld != NULL) {
-		m_currentWorld->FUN_1001fe90(this);
+		m_currentWorld->RemovePresenterFromBoundaries(this);
 
 		if (m_compositePresenter != NULL && m_compositePresenter->IsA("LegoAnimMMPresenter")) {
 			return;
@@ -1151,18 +1159,18 @@ void LegoAnimPresenter::VTable0x90()
 }
 
 // FUNCTION: LEGO1 0x1006c8a0
-void LegoAnimPresenter::FUN_1006c8a0(MxBool p_bool)
+void LegoAnimPresenter::SetDisabled(MxBool p_disabled)
 {
 	if (m_roiMapSize != 0 && m_roiMap != NULL) {
 		for (MxU32 i = 1; i <= m_roiMapSize; i++) {
 			LegoEntity* entity = m_roiMap[i]->GetEntity();
 
 			if (entity != NULL) {
-				if (p_bool) {
-					entity->SetUnknown0x10Flag(LegoEntity::c_altBit1);
+				if (p_disabled) {
+					entity->SetInteractionFlag(LegoEntity::c_disabled);
 				}
 				else {
-					entity->ClearUnknown0x10Flag(LegoEntity::c_altBit1);
+					entity->ClearInteractionFlag(LegoEntity::c_disabled);
 				}
 			}
 		}
@@ -1212,4 +1220,440 @@ MxResult LegoAnimPresenter::VTable0x98(LegoPathBoundary* p_boundary)
 	}
 
 	return SUCCESS;
+}
+
+// FUNCTION: LEGO1 0x1006caa0
+// FUNCTION: BETA10 0x1005223d
+void LegoLoopingAnimPresenter::StreamingTickle()
+{
+	if (m_subscriber->PeekData()) {
+		MxStreamChunk* chunk = m_subscriber->PopData();
+		m_subscriber->FreeDataChunk(chunk);
+	}
+
+	if (m_unk0x95) {
+		ProgressTickleState(e_done);
+		if (m_compositePresenter) {
+			if (m_compositePresenter->IsA("LegoAnimMMPresenter")) {
+				m_compositePresenter->VTable0x60(this);
+			}
+		}
+	}
+	else {
+		if (m_action->GetDuration() != -1) {
+			if (m_action->GetElapsedTime() > m_action->GetDuration() + m_action->GetStartTime()) {
+				m_unk0x95 = TRUE;
+			}
+		}
+	}
+}
+
+// FUNCTION: LEGO1 0x1006cb40
+// FUNCTION: BETA10 0x1005239a
+void LegoLoopingAnimPresenter::PutFrame()
+{
+	MxLong time;
+
+	if (m_action->GetStartTime() <= m_action->GetElapsedTime()) {
+		time = (m_action->GetElapsedTime() - m_action->GetStartTime()) % m_anim->GetDuration();
+	}
+	else {
+		time = 0;
+	}
+
+	FUN_1006b9a0(m_anim, time, m_unk0x78);
+
+	if (m_unk0x8c != NULL && m_currentWorld != NULL && m_currentWorld->GetCameraController() != NULL) {
+		for (MxS32 i = 0; i < m_unk0x94; i++) {
+			if (m_unk0x8c[i] != NULL) {
+				MxMatrix mat(m_unk0x8c[i]->GetLocal2World());
+
+				Vector3 pos(mat[0]);
+				Vector3 dir(mat[1]);
+				Vector3 up(mat[2]);
+				Vector3 und(mat[3]);
+
+				float possqr = sqrt(pos.LenSquared());
+				float dirsqr = sqrt(dir.LenSquared());
+				float upsqr = sqrt(up.LenSquared());
+
+				up = und;
+
+				up -= m_currentWorld->GetCameraController()->GetWorldLocation();
+				dir /= dirsqr;
+				pos.EqualsCross(dir, up);
+				pos.Unitize();
+				up.EqualsCross(pos, dir);
+				pos *= possqr;
+				dir *= dirsqr;
+				up *= upsqr;
+
+				m_unk0x8c[i]->SetLocal2World(mat);
+				m_unk0x8c[i]->WrappedUpdateWorldData();
+			}
+		}
+	}
+}
+
+// FUNCTION: LEGO1 0x1006cdd0
+LegoLocomotionAnimPresenter::LegoLocomotionAnimPresenter()
+{
+	Init();
+}
+
+// FUNCTION: LEGO1 0x1006d050
+LegoLocomotionAnimPresenter::~LegoLocomotionAnimPresenter()
+{
+	Destroy(TRUE);
+}
+
+// FUNCTION: LEGO1 0x1006d0b0
+void LegoLocomotionAnimPresenter::Init()
+{
+	m_unk0xc0 = 0;
+	m_unk0xc4 = NULL;
+	m_unk0xcc = -1;
+	m_unk0xd0 = -1;
+	m_roiMapList = NULL;
+	m_unk0xd4 = 0;
+}
+
+// FUNCTION: LEGO1 0x1006d0e0
+void LegoLocomotionAnimPresenter::Destroy(MxBool p_fromDestructor)
+{
+	ENTER(m_criticalSection);
+
+	if (m_unk0xc4) {
+		delete[] m_unk0xc4;
+	}
+
+	if (m_roiMapList) {
+		delete m_roiMapList;
+	}
+
+	m_roiMap = NULL;
+	Init();
+
+	m_criticalSection.Leave();
+
+	if (!p_fromDestructor) {
+		LegoLoopingAnimPresenter::Destroy();
+	}
+}
+
+// FUNCTION: LEGO1 0x1006d140
+MxResult LegoLocomotionAnimPresenter::CreateAnim(MxStreamChunk* p_chunk)
+{
+	MxResult result = LegoAnimPresenter::CreateAnim(p_chunk);
+	return result == SUCCESS ? SUCCESS : result;
+}
+
+// FUNCTION: LEGO1 0x1006d160
+// FUNCTION: BETA10 0x100528c7
+MxResult LegoLocomotionAnimPresenter::AddToManager()
+{
+	m_roiMapList = new LegoROIMapList();
+
+	if (m_roiMapList == NULL) {
+		return FAILURE;
+	}
+
+	return LegoAnimPresenter::AddToManager();
+}
+
+// FUNCTION: LEGO1 0x1006d5b0
+void LegoLocomotionAnimPresenter::Destroy()
+{
+	Destroy(FALSE);
+}
+
+// FUNCTION: LEGO1 0x1006d5c0
+void LegoLocomotionAnimPresenter::PutFrame()
+{
+	// Empty
+}
+
+// FUNCTION: LEGO1 0x1006d5d0
+void LegoLocomotionAnimPresenter::ReadyTickle()
+{
+	LegoLoopingAnimPresenter::ReadyTickle();
+
+	if (m_currentWorld != NULL && m_currentTickleState == e_starting) {
+		m_currentWorld->Add(this);
+		if (m_compositePresenter != NULL) {
+			SendToCompositePresenter(Lego());
+		}
+
+		m_unk0xd4++;
+	}
+}
+
+// FUNCTION: LEGO1 0x1006d610
+// FUNCTION: BETA10 0x10052a34
+void LegoLocomotionAnimPresenter::StartingTickle()
+{
+	if (m_subscriber->PeekData()) {
+		MxStreamChunk* chunk = m_subscriber->PopData();
+		m_subscriber->FreeDataChunk(chunk);
+	}
+
+	if (m_roiMapList->GetNumElements() != 0) {
+		ProgressTickleState(e_streaming);
+	}
+}
+
+// FUNCTION: LEGO1 0x1006d660
+void LegoLocomotionAnimPresenter::StreamingTickle()
+{
+	if (m_unk0xd4 == 0) {
+		EndAction();
+	}
+}
+
+// FUNCTION: LEGO1 0x1006d670
+void LegoLocomotionAnimPresenter::EndAction()
+{
+	if (m_action) {
+		MxVideoPresenter::EndAction();
+	}
+}
+
+// FUNCTION: LEGO1 0x1006d680
+// FUNCTION: BETA10 0x10052b3d
+void LegoLocomotionAnimPresenter::FUN_1006d680(LegoAnimActor* p_actor, MxFloat p_value)
+{
+	// This asserts that LegoLocomotionAnimPresenter is contained in legoanimpresenter.cpp
+	AUTOLOCK(m_criticalSection);
+
+	MxVariableTable* variableTable = VariableTable();
+
+	const char* key = ((LegoAnimNodeData*) m_anim->GetRoot()->GetData())->GetName();
+	variableTable->SetVariable(key, p_actor->GetROI()->GetName());
+
+	FUN_100695c0();
+	FUN_10069b10();
+
+	if (m_roiMap != NULL) {
+		m_roiMapList->Append(m_roiMap);
+		p_actor->CreateAnimActorStruct(m_anim, p_value, m_roiMap, m_roiMapSize);
+		m_roiMap = NULL;
+	}
+
+	variableTable->SetVariable(key, "");
+
+	if (m_sceneROIs != NULL) {
+		delete m_sceneROIs;
+		m_sceneROIs = NULL;
+	}
+}
+
+// We do not have any hard evidence that `LegoHideAnimPresenter` is part of this file as well.
+// However, since all of the other AnimPresenters are in the same file, it is reasonable to assume
+// that the same holds here.
+
+// FUNCTION: LEGO1 0x1006d7e0
+LegoHideAnimPresenter::LegoHideAnimPresenter()
+{
+	Init();
+}
+
+// FUNCTION: LEGO1 0x1006d9f0
+LegoHideAnimPresenter::~LegoHideAnimPresenter()
+{
+	Destroy(TRUE);
+}
+
+// FUNCTION: LEGO1 0x1006da50
+void LegoHideAnimPresenter::Init()
+{
+	m_boundaryMap = NULL;
+}
+
+// FUNCTION: LEGO1 0x1006da60
+void LegoHideAnimPresenter::Destroy(MxBool p_fromDestructor)
+{
+	ENTER(m_criticalSection);
+
+	if (m_boundaryMap) {
+		delete[] m_boundaryMap;
+	}
+	Init();
+
+	m_criticalSection.Leave();
+
+	// This appears to be a bug, since it results in an endless loop
+	if (!p_fromDestructor) {
+		LegoHideAnimPresenter::Destroy();
+	}
+}
+
+// FUNCTION: LEGO1 0x1006dab0
+MxResult LegoHideAnimPresenter::AddToManager()
+{
+	return LegoAnimPresenter::AddToManager();
+}
+
+// FUNCTION: LEGO1 0x1006dac0
+void LegoHideAnimPresenter::Destroy()
+{
+	Destroy(FALSE);
+}
+
+// FUNCTION: LEGO1 0x1006dad0
+void LegoHideAnimPresenter::PutFrame()
+{
+}
+
+// FUNCTION: LEGO1 0x1006dae0
+// FUNCTION: BETA10 0x100530f4
+void LegoHideAnimPresenter::ReadyTickle()
+{
+	LegoLoopingAnimPresenter::ReadyTickle();
+
+	if (m_currentWorld) {
+		if (m_currentTickleState == e_starting && m_compositePresenter != NULL) {
+			SendToCompositePresenter(Lego());
+		}
+
+		m_currentWorld->Add(this);
+	}
+}
+
+// FUNCTION: LEGO1 0x1006db20
+// FUNCTION: BETA10 0x1005316b
+void LegoHideAnimPresenter::StartingTickle()
+{
+	LegoLoopingAnimPresenter::StartingTickle();
+
+	if (m_currentTickleState == e_streaming) {
+		FUN_1006dc10();
+		FUN_1006db40(0);
+	}
+}
+
+// FUNCTION: LEGO1 0x1006db40
+// FUNCTION: BETA10 0x100531ab
+void LegoHideAnimPresenter::FUN_1006db40(LegoTime p_time)
+{
+	FUN_1006db60(m_anim->GetRoot(), p_time);
+}
+
+// FUNCTION: LEGO1 0x1006db60
+// FUNCTION: BETA10 0x100531de
+void LegoHideAnimPresenter::FUN_1006db60(LegoTreeNode* p_node, LegoTime p_time)
+{
+	LegoAnimNodeData* data = (LegoAnimNodeData*) p_node->GetData();
+	MxBool newB = FALSE;
+	MxBool previousB = FALSE;
+
+	if (m_roiMap != NULL) {
+		LegoROI* roi = m_roiMap[data->GetROIIndex()];
+
+		if (roi != NULL) {
+			newB = data->GetVisibility(p_time);
+			previousB = roi->GetVisibility();
+			roi->SetVisibility(newB);
+		}
+	}
+
+	if (m_boundaryMap != NULL) {
+		LegoPathBoundary* boundary = m_boundaryMap[data->GetBoundaryIndex()];
+
+		if (boundary != NULL) {
+			newB = data->GetVisibility(p_time);
+			previousB = boundary->GetFlag0x10();
+			boundary->SetFlag0x10(newB);
+		}
+	}
+
+	for (MxS32 i = 0; i < p_node->GetNumChildren(); i++) {
+		FUN_1006db60(p_node->GetChild(i), p_time);
+	}
+}
+
+// FUNCTION: LEGO1 0x1006dc10
+// FUNCTION: BETA10 0x100532fd
+void LegoHideAnimPresenter::FUN_1006dc10()
+{
+	LegoHideAnimStructMap anims;
+
+	FUN_1006e3f0(anims, m_anim->GetRoot());
+
+	if (m_boundaryMap != NULL) {
+		delete[] m_boundaryMap;
+	}
+
+	m_boundaryMap = new LegoPathBoundary*[anims.size() + 1];
+	m_boundaryMap[0] = NULL;
+
+	for (LegoHideAnimStructMap::iterator it = anims.begin(); !(it == anims.end()); it++) {
+		m_boundaryMap[(*it).second.m_index] = (*it).second.m_boundary;
+		delete[] const_cast<char*>((*it).first);
+	}
+}
+
+// FUNCTION: LEGO1 0x1006e3f0
+// FUNCTION: BETA10 0x1005345e
+void LegoHideAnimPresenter::FUN_1006e3f0(LegoHideAnimStructMap& p_map, LegoTreeNode* p_node)
+{
+	LegoAnimNodeData* data = (LegoAnimNodeData*) p_node->GetData();
+	const char* name = data->GetName();
+
+	if (name != NULL) {
+		LegoPathBoundary* boundary = m_currentWorld->FindPathBoundary(name);
+
+		if (boundary != NULL) {
+			FUN_1006e470(p_map, data, name, boundary);
+		}
+		else {
+			data->SetBoundaryIndex(0);
+		}
+	}
+
+	MxS32 count = p_node->GetNumChildren();
+	for (MxS32 i = 0; i < count; i++) {
+		FUN_1006e3f0(p_map, p_node->GetChild(i));
+	}
+}
+
+// FUNCTION: LEGO1 0x1006e470
+// FUNCTION: BETA10 0x10053520
+void LegoHideAnimPresenter::FUN_1006e470(
+	LegoHideAnimStructMap& p_map,
+	LegoAnimNodeData* p_data,
+	const char* p_name,
+	LegoPathBoundary* p_boundary
+)
+{
+	LegoHideAnimStructMap::iterator it;
+
+	it = p_map.find(p_name);
+	if (it == p_map.end()) {
+		LegoHideAnimStruct animStruct;
+		animStruct.m_index = p_map.size() + 1;
+		animStruct.m_boundary = p_boundary;
+
+		p_data->SetBoundaryIndex(animStruct.m_index);
+
+		char* name = new char[strlen(p_name) + 1];
+		strcpy(name, p_name);
+
+		p_map[name] = animStruct;
+	}
+	else {
+		p_data->SetBoundaryIndex((*it).second.m_index);
+	}
+}
+
+// FUNCTION: LEGO1 0x1006e9e0
+// FUNCTION: BETA10 0x100535ef
+void LegoHideAnimPresenter::EndAction()
+{
+	if (m_action) {
+		MxVideoPresenter::EndAction();
+
+		if (m_currentWorld) {
+			m_currentWorld->Remove(this);
+		}
+	}
 }

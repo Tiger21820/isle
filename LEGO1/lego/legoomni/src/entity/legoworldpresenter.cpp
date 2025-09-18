@@ -58,11 +58,11 @@ LegoWorldPresenter::~LegoWorldPresenter()
 		PlantManager()->LoadWorldInfo(worldId);
 		AnimationManager()->LoadWorldInfo(worldId);
 		BuildingManager()->LoadWorldInfo();
-		result = ((LegoWorld*) m_entity)->VTable0x5c();
+		result = ((LegoWorld*) m_entity)->WaitForTransition();
 	}
 
 	if (result == FALSE) {
-		FUN_10015820(FALSE, LegoOmni::c_disableInput | LegoOmni::c_disable3d | LegoOmni::c_clearScreen);
+		Disable(FALSE, LegoOmni::c_disableInput | LegoOmni::c_disable3d | LegoOmni::c_clearScreen);
 	}
 
 	if (m_entity) {
@@ -393,7 +393,7 @@ MxResult LegoWorldPresenter::LoadWorldModel(ModelDbModel& p_model, FILE* p_wdbFi
 	}
 
 	modelPresenter.SetAction(&action);
-	modelPresenter.FUN_1007ff70(chunk, createdEntity, p_model.m_unk0x34, p_world);
+	modelPresenter.CreateROI(chunk, createdEntity, p_model.m_visible, p_world);
 	delete[] buff;
 
 	return SUCCESS;

@@ -36,7 +36,7 @@ const char* g_strHIT_WALL_SOUND = "HIT_WALL_SOUND";
 
 // GLOBAL: LEGO1 0x100f3308
 // GLOBAL: BETA10 0x101f1e1c
-MxLong g_unk0x100f3308 = 0;
+MxLong g_timeLastHitSoundPlayed = 0;
 
 // FUNCTION: LEGO1 0x1002d700
 // FUNCTION: BETA10 0x100ae6e0
@@ -162,7 +162,7 @@ MxResult LegoPathActor::VTable0x88(
 	}
 	else {
 		m_boundary->AddActor(this);
-		FUN_10010c30();
+		TransformPointOfView();
 	}
 
 	m_unk0xec = m_roi->GetLocal2World();
@@ -222,7 +222,7 @@ MxResult LegoPathActor::VTable0x84(
 
 	if (m_cameraFlag && m_userNavFlag) {
 		m_boundary->AddActor(this);
-		FUN_10010c30();
+		TransformPointOfView();
 	}
 	else {
 		p5.EqualsCross(*p_boundary->GetUp(), p3);
@@ -291,8 +291,8 @@ MxS32 LegoPathActor::VTable0x8c(float p_time, Matrix4& p_transform)
 				if (m_boundary == oldBoundary) {
 					MxLong time = Timer()->GetTime();
 
-					if (time - g_unk0x100f3308 > 1000) {
-						g_unk0x100f3308 = time;
+					if (time - g_timeLastHitSoundPlayed > 1000) {
+						g_timeLastHitSoundPlayed = time;
 						const char* var = VariableTable()->GetVariable(g_strHIT_WALL_SOUND);
 
 						if (var && var[0] != 0) {
@@ -392,14 +392,14 @@ void LegoPathActor::VTable0x74(Matrix4& p_transform)
 {
 	if (m_userNavFlag) {
 		m_roi->WrappedSetLocal2WorldWithWorldDataUpdate(p_transform);
-		FUN_10010c30();
+		TransformPointOfView();
 	}
 	else {
 		m_roi->WrappedSetLocal2WorldWithWorldDataUpdate(p_transform);
 		m_roi->WrappedUpdateWorldData();
 
 		if (m_cameraFlag) {
-			FUN_10010c30();
+			TransformPointOfView();
 		}
 	}
 }
@@ -439,7 +439,7 @@ void LegoPathActor::Animate(float p_time)
 			LegoWorld* world = CurrentWorld();
 
 			if (world) {
-				world->GetCameraController()->FUN_10012290(DTOR(m_unk0x14c));
+				world->GetCameraController()->RotateZ(DTOR(m_unk0x14c));
 			}
 		}
 	}
@@ -745,7 +745,7 @@ void LegoPathActor::VTable0xa8()
 
 	if (m_userNavFlag) {
 		m_roi->WrappedSetLocal2WorldWithWorldDataUpdate(m_unk0xec);
-		FUN_10010c30();
+		TransformPointOfView();
 	}
 }
 

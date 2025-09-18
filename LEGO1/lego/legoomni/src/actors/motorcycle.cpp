@@ -84,11 +84,11 @@ void Motocycle::Exit()
 // FUNCTION: LEGO1 0x10035c50
 MxLong Motocycle::HandleClick()
 {
-	if (!FUN_1003ef60()) {
+	if (!CanExit()) {
 		return 1;
 	}
 
-	FUN_10015820(TRUE, 0);
+	Disable(TRUE, 0);
 
 	((Isle*) CurrentWorld())->SetDestLocation(LegoGameState::Area::e_motocycle);
 	TransitionManager()->StartTransition(MxTransitionManager::e_mosaic, 50, FALSE, TRUE);
@@ -115,7 +115,7 @@ MxLong Motocycle::HandleControl(LegoControlManagerNotificationParam& p_param)
 {
 	MxLong result = 0;
 
-	if (p_param.m_unk0x28 == 1) {
+	if (p_param.m_enabledChild == 1) {
 		switch (p_param.m_clickedObjectId) {
 		case IsleScript::c_MotoBikeArms_Ctl:
 			Exit();
@@ -151,8 +151,8 @@ void Motocycle::ActivateSceneActions()
 	PlayMusic(JukeboxScript::c_PoliceStation_Music);
 
 	Act1State* act1state = (Act1State*) GameState()->GetState("Act1State");
-	if (!act1state->m_unk0x022) {
-		act1state->m_unk0x022 = TRUE;
+	if (!act1state->m_playedExitExplanation) {
+		act1state->m_playedExitExplanation = TRUE;
 
 		MxMatrix mat(UserActor()->GetROI()->GetLocal2World());
 		mat.TranslateBy(mat[2][0] * 2.5, mat[2][1] + 0.7, mat[2][2] * 2.5);

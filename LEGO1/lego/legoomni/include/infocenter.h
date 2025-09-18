@@ -18,6 +18,25 @@ class LegoControlManagerNotificationParam;
 // SIZE 0x94
 class InfocenterState : public LegoState {
 public:
+	enum {
+		e_playCutscene = 0,
+		e_introCancelled = 1,
+		e_notRegistered = 2,
+		e_newState = 3,
+		e_selectedSave = 4,
+		e_selectedCharacterAndDestination = 5,
+		// e_6 = 6,
+		// e_7 = 7,
+		e_exitQueried = 8,
+		// e_9 = 9,
+		// e_10 = 10,
+		e_welcomeAnimation = 11,
+		e_exiting = 12,
+		e_playCredits = 13,
+		e_exitingToIsland = 14,
+		e_backToInfoAct1 = 15,
+	};
+
 	InfocenterState();
 	~InfocenterState() override;
 
@@ -72,16 +91,26 @@ public:
 	Playlist m_returnDialogue[3];   // 0x20
 	Playlist m_leaveDialogue[3];    // 0x44
 	Playlist m_bricksterDialogue;   // 0x68
-	MxU32 m_unk0x74;                // 0x74
+	MxU32 m_state;                  // 0x74
 	MxStillPresenter* m_letters[7]; // 0x78
 };
 
 // SIZE 0x18
 struct InfocenterMapEntry {
+	enum {
+		e_infocenter = 3,
+		e_jetrace = 10,
+		e_carrace = 11,
+		e_pizzeria = 12,
+		e_garage = 13,
+		e_hospital = 14,
+		e_police = 15,
+	};
+
 	InfocenterMapEntry();
 
 	MxStillPresenter* m_destCtl; // 0x00
-	undefined4 m_unk0x04;        // 0x04
+	MxU32 m_target;              // 0x04
 	MxRect<MxS32> m_area;        // 0x08
 };
 
@@ -90,25 +119,6 @@ struct InfocenterMapEntry {
 // SIZE 0x1d8
 class Infocenter : public LegoWorld {
 public:
-	enum Cutscene {
-		e_noIntro = -1,
-		e_legoMovie,
-		e_mindscapeMovie,
-		e_introMovie,
-		e_outroMovie,
-		e_badEndMovie,
-		e_goodEndMovie
-	};
-
-	enum Character {
-		e_noCharacter = 0,
-		e_pepper,
-		e_mama,
-		e_papa,
-		e_nick,
-		e_laura
-	};
-
 	Infocenter();
 	~Infocenter() override;
 
@@ -131,7 +141,7 @@ public:
 
 	MxResult Create(MxDSAction& p_dsAction) override; // vtable+0x18
 	void ReadyWorld() override;                       // vtable+0x50
-	MxBool VTable0x5c() override;                     // vtable+0x5c
+	MxBool WaitForTransition() override;              // vtable+0x5c
 	MxBool Escape() override;                         // vtable+0x64
 	void Enable(MxBool p_enable) override;            // vtable+0x68
 
@@ -151,10 +161,10 @@ private:
 	void UpdateFrameHot(MxBool p_display);
 	void Reset();
 
-	void PlayCutscene(Cutscene p_entityId, MxBool p_scale);
+	void PlayCutscene(IntroScript::Script p_entityId, MxBool p_scale);
 	void StopCutscene();
 
-	void FUN_10070d10(MxS32 p_x, MxS32 p_y);
+	void UpdateEnabledGlowControl(MxS32 p_x, MxS32 p_y);
 
 	void StartCredits();
 	void StopCredits();
@@ -169,16 +179,16 @@ private:
 	MxS16 m_selectedCharacter;                      // 0xfc
 	InfocenterState* m_infocenterState;             // 0x100
 	LegoGameState::Area m_destLocation;             // 0x104
-	Cutscene m_currentCutscene;                     // 0x108
+	IntroScript::Script m_currentCutscene;          // 0x108
 	Radio m_radio;                                  // 0x10c
 	MxStillPresenter* m_dragPresenter;              // 0x11c
 	InfocenterMapEntry m_glowInfo[7];               // 0x120
-	MxS16 m_unk0x1c8;                               // 0x1c8
+	MxS16 m_enabledGlowControl;                     // 0x1c8
 	MxStillPresenter* m_frame;                      // 0x1cc
 	MxS16 m_infoManDialogueTimer;                   // 0x1d0
 	MxS16 m_bookAnimationTimer;                     // 0x1d2
-	MxU16 m_unk0x1d4;                               // 0x1d4
-	MxS16 m_unk0x1d6;                               // 0x1d6
+	MxU16 m_playingMovieCounter;                    // 0x1d4
+	MxS16 m_bigInfoBlinkTimer;                      // 0x1d6
 };
 
 #endif // INFOCENTER_H

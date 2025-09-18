@@ -17,15 +17,16 @@ DECOMP_SIZE_ASSERT(LegoNotifyListCursor, 0x10)
 DECOMP_SIZE_ASSERT(LegoEventQueue, 0x18)
 
 // GLOBAL: LEGO1 0x100f31b0
-MxS32 g_unk0x100f31b0 = -1;
+MxS32 g_clickedObjectId = -1;
 
 // GLOBAL: LEGO1 0x100f31b4
-const char* g_unk0x100f31b4 = NULL;
+const char* g_clickedAtom = NULL;
 
 // GLOBAL: LEGO1 0x100f67b8
 MxBool g_unk0x100f67b8 = TRUE;
 
 // FUNCTION: LEGO1 0x1005b790
+// STUB: BETA10 0x10088a8e
 LegoInputManager::LegoInputManager()
 {
 	m_keyboardNotifyList = NULL;
@@ -38,7 +39,7 @@ LegoInputManager::LegoInputManager()
 	m_y = 0;
 	m_controlManager = NULL;
 	m_unk0x81 = FALSE;
-	m_unk0x88 = FALSE;
+	m_inputProcessingDisabled = FALSE;
 	m_directInput = NULL;
 	m_directInputDevice = NULL;
 	m_kbStateSuccess = FALSE;
@@ -59,11 +60,13 @@ LegoInputManager::~LegoInputManager()
 }
 
 // FUNCTION: LEGO1 0x1005b960
+// STUB: BETA10 0x10088c9c
 MxResult LegoInputManager::Create(HWND p_hwnd)
 {
 	MxResult result = SUCCESS;
 
 	m_controlManager = new LegoControlManager;
+	assert(m_controlManager);
 
 	if (!m_keyboardNotifyList) {
 		m_keyboardNotifyList = new LegoNotifyList;
@@ -343,7 +346,7 @@ void LegoInputManager::QueueEvent(NotificationId p_id, MxU8 p_modifier, MxLong p
 {
 	LegoEventNotificationParam param = LegoEventNotificationParam(p_id, NULL, p_modifier, p_x, p_y, p_key);
 
-	if (((!m_unk0x88) || ((m_unk0x335 && (param.GetNotification() == c_notificationButtonDown)))) ||
+	if (((!m_inputProcessingDisabled) || ((m_unk0x335 && (param.GetNotification() == c_notificationButtonDown)))) ||
 		((m_unk0x336 && (p_key == VK_SPACE)))) {
 		ProcessOneEvent(param);
 	}
@@ -429,23 +432,23 @@ MxBool LegoInputManager::ProcessOneEvent(LegoEventNotificationParam& p_param)
 					if (presenter->GetDisplayZ() < 0) {
 						processRoi = FALSE;
 
-						if (m_controlManager->FUN_10029210(p_param, presenter)) {
+						if (m_controlManager->HandleButtonDown(p_param, presenter)) {
 							return TRUE;
 						}
 					}
 					else {
 						LegoROI* roi = PickROI(p_param.GetX(), p_param.GetY());
 
-						if (roi == NULL && m_controlManager->FUN_10029210(p_param, presenter)) {
+						if (roi == NULL && m_controlManager->HandleButtonDown(p_param, presenter)) {
 							return TRUE;
 						}
 					}
 				}
 			}
 			else if (p_param.GetNotification() == c_notificationButtonUp) {
-				if (g_unk0x100f31b0 != -1 || m_controlManager->GetUnknown0x10() ||
-					m_controlManager->GetUnknown0x0c() == 1) {
-					MxBool result = m_controlManager->FUN_10029210(p_param, NULL);
+				if (g_clickedObjectId != -1 || m_controlManager->IsSecondButtonDown() ||
+					m_controlManager->HandleUpNextTickle() == 1) {
+					MxBool result = m_controlManager->HandleButtonDown(p_param, NULL);
 					StopAutoDragTimer();
 
 					m_unk0x80 = FALSE;
@@ -582,9 +585,10 @@ void LegoInputManager::StopAutoDragTimer()
 }
 
 // FUNCTION: LEGO1 0x1005cff0
+// FUNCTION: BETA10 0x10096a10
 void LegoInputManager::EnableInputProcessing()
 {
-	m_unk0x88 = FALSE;
-	g_unk0x100f31b0 = -1;
-	g_unk0x100f31b4 = NULL;
+	m_inputProcessingDisabled = FALSE;
+	g_clickedObjectId = -1;
+	g_clickedAtom = NULL;
 }

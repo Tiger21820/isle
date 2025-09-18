@@ -9,6 +9,7 @@
 #include "shape/legobox.h"
 #include "shape/legosphere.h"
 
+#include <crtdbg.h>
 #include <string.h>
 #include <vec.h>
 
@@ -43,13 +44,13 @@ ROIColorAlias g_roiColorAliases[22] = {
 int g_roiConfig = 100;
 
 // GLOBAL: LEGO1 0x10101370
-const char* g_unk0x10101370[] = {"bike", "moto", NULL};
+const char* g_sharedModelsHigh[] = {"bike", "moto", NULL};
 
 // GLOBAL: LEGO1 0x10101380
-const char* g_unk0x10101380[] = {"bike", "moto", "haus", NULL};
+const char* g_sharedModelsLow[] = {"bike", "moto", "haus", NULL};
 
 // GLOBAL: LEGO1 0x10101390
-const char* g_unk0x10101390[] = {"rcuser", "jsuser", "dunebugy", "chtrblad", "chtrbody", "chtrshld", NULL};
+const char* g_alwaysLoadNames[] = {"rcuser", "jsuser", "dunebugy", "chtrblad", "chtrbody", "chtrshld", NULL};
 
 // GLOBAL: LEGO1 0x101013ac
 ColorOverride g_colorOverride = NULL;
@@ -58,8 +59,12 @@ ColorOverride g_colorOverride = NULL;
 TextureHandler g_textureHandler = NULL;
 
 // FUNCTION: LEGO1 0x100a81b0
-void LegoROI::FUN_100a81b0(const LegoChar* p_error, const LegoChar* p_name)
+// FUNCTION: BETA10 0x101898c0
+// FUNCTION: ALPHA 0x100bb1c0
+void LegoROI::FUN_100a81b0(const LegoChar* p_error, ...)
 {
+	// Probably a printf-like debug function that was removed early.
+	// No known implementation in any of the binaries.
 }
 
 // FUNCTION: LEGO1 0x100a81c0
@@ -69,6 +74,7 @@ void LegoROI::configureLegoROI(int p_roiConfig)
 }
 
 // FUNCTION: LEGO1 0x100a81d0
+// FUNCTION: BETA10 0x101898e8
 LegoROI::LegoROI(Tgl::Renderer* p_renderer) : ViewROI(p_renderer, NULL)
 {
 	m_parentROI = NULL;
@@ -77,6 +83,7 @@ LegoROI::LegoROI(Tgl::Renderer* p_renderer) : ViewROI(p_renderer, NULL)
 }
 
 // FUNCTION: LEGO1 0x100a82d0
+// FUNCTION: BETA10 0x10189994
 LegoROI::LegoROI(Tgl::Renderer* p_renderer, ViewLODList* p_lodList) : ViewROI(p_renderer, p_lodList)
 {
 	m_parentROI = NULL;
@@ -85,6 +92,7 @@ LegoROI::LegoROI(Tgl::Renderer* p_renderer, ViewLODList* p_lodList) : ViewROI(p_
 }
 
 // FUNCTION: LEGO1 0x100a83c0
+// FUNCTION: BETA10 0x10189a42
 LegoROI::~LegoROI()
 {
 	if (comp) {
@@ -105,8 +113,9 @@ LegoROI::~LegoROI()
 }
 
 // FUNCTION: LEGO1 0x100a84a0
+// FUNCTION: BETA10 0x10189b99
 LegoResult LegoROI::Read(
-	OrientableROI* p_unk0xd4,
+	OrientableROI* p_parentROI,
 	Tgl::Renderer* p_renderer,
 	ViewLODListManager* p_viewLODListManager,
 	LegoTextureContainer* p_textureContainer,
@@ -126,7 +135,7 @@ LegoResult LegoROI::Read(
 	LegoSphere sphere;
 	LegoBox box;
 
-	m_parentROI = p_unk0xd4;
+	m_parentROI = p_parentROI;
 
 	if (p_storage->Read(&length, sizeof(LegoU32)) != SUCCESS) {
 		goto done;
@@ -169,11 +178,11 @@ LegoResult LegoROI::Read(
 		textureName = NULL;
 	}
 
-	if (p_storage->Read(&m_unk0x100, sizeof(undefined)) != SUCCESS) {
+	if (p_storage->Read(&m_sharedLodList, sizeof(LegoBool)) != SUCCESS) {
 		goto done;
 	}
 
-	if (m_unk0x100) {
+	if (m_sharedLodList) {
 		for (roiLength = strlen(m_name); roiLength; roiLength--) {
 			if (m_name[roiLength - 1] < '0' || m_name[roiLength - 1] > '9') {
 				break;
@@ -216,30 +225,30 @@ LegoResult LegoROI::Read(
 			}
 
 			if (g_roiConfig <= 2) {
-				for (i = 0; g_unk0x10101380[i] != NULL; i++) {
-					if (!strnicmp(m_name, g_unk0x10101380[i], 4)) {
-						roiName = g_unk0x10101380[i];
+				for (i = 0; g_sharedModelsLow[i] != NULL; i++) {
+					if (!strnicmp(m_name, g_sharedModelsLow[i], 4)) {
+						roiName = g_sharedModelsLow[i];
 						break;
 					}
 				}
 			}
 			else {
-				for (i = 0; g_unk0x10101370[i] != NULL; i++) {
-					if (!strnicmp(m_name, g_unk0x10101370[i], 4)) {
-						roiName = g_unk0x10101370[i];
+				for (i = 0; g_sharedModelsHigh[i] != NULL; i++) {
+					if (!strnicmp(m_name, g_sharedModelsHigh[i], 4)) {
+						roiName = g_sharedModelsHigh[i];
 						break;
 					}
 				}
 			}
 
 			if ((lodList = p_viewLODListManager->Lookup(roiName))) {
-				for (j = 0; g_unk0x10101390[j] != NULL; j++) {
-					if (!strcmpi(g_unk0x10101390[j], roiName)) {
+				for (j = 0; g_alwaysLoadNames[j] != NULL; j++) {
+					if (!strcmpi(g_alwaysLoadNames[j], roiName)) {
 						break;
 					}
 				}
 
-				if (g_unk0x10101390[j] != NULL) {
+				if (g_alwaysLoadNames[j] != NULL) {
 					while (lodList->Size()) {
 						delete const_cast<ViewLOD*>(lodList->PopBack());
 					}
@@ -251,7 +260,7 @@ LegoResult LegoROI::Read(
 						}
 
 						if (j == 0) {
-							if (surplusLODs != 0 && lod->GetUnknown0x08Test8()) {
+							if (surplusLODs != 0 && lod->IsExtraLOD()) {
 								numLODs++;
 							}
 						}
@@ -268,7 +277,7 @@ LegoResult LegoROI::Read(
 					}
 
 					if (i == 0) {
-						if (surplusLODs != 0 && lod->GetUnknown0x08Test8()) {
+						if (surplusLODs != 0 && lod->IsExtraLOD()) {
 							numLODs++;
 						}
 					}
@@ -337,7 +346,8 @@ done:
 }
 
 // FUNCTION: LEGO1 0x100a8cb0
-LegoResult LegoROI::FUN_100a8cb0(LegoAnimNodeData* p_data, LegoTime p_time, Matrix4& p_matrix)
+// FUNCTION: BETA10 0x1018a7e8
+LegoResult LegoROI::CreateLocalTransform(LegoAnimNodeData* p_data, LegoTime p_time, Matrix4& p_matrix)
 {
 	p_matrix.SetIdentity();
 	p_data->CreateLocalTransform(p_time, p_matrix);
@@ -379,31 +389,41 @@ LegoROI* LegoROI::FindChildROI(const LegoChar* p_name, LegoROI* p_roi)
 }
 
 // FUNCTION: LEGO1 0x100a8da0
-LegoResult LegoROI::FUN_100a8da0(LegoTreeNode* p_node, const Matrix4& p_matrix, LegoTime p_time, LegoROI* p_roi)
+// FUNCTION: BETA10 0x1018a9fb
+LegoResult LegoROI::ApplyChildAnimationTransformation(
+	LegoTreeNode* p_node,
+	const Matrix4& p_matrix,
+	LegoTime p_time,
+	LegoROI* p_parentROI
+)
 {
 	MxMatrix mat;
 	LegoAnimNodeData* data = (LegoAnimNodeData*) p_node->GetData();
 	const LegoChar* name = data->GetName();
-	LegoROI* roi = FindChildROI(name, p_roi);
+	LegoROI* roi = FindChildROI(name, p_parentROI);
 
 	if (roi == NULL) {
 		roi = FindChildROI(name, this);
 	}
 
 	if (roi != NULL) {
-		FUN_100a8cb0(data, p_time, mat);
+		CreateLocalTransform(data, p_time, mat);
 		roi->m_local2world.Product(mat, p_matrix);
 		roi->UpdateWorldData();
 
-		LegoBool und = data->FUN_100a0990(p_time);
-		roi->SetVisibility(und);
+		roi->SetVisibility(data->GetVisibility(p_time));
 
 		for (LegoU32 i = 0; i < p_node->GetNumChildren(); i++) {
-			FUN_100a8da0(p_node->GetChild(i), roi->m_local2world, p_time, roi);
+			ApplyChildAnimationTransformation(p_node->GetChild(i), roi->m_local2world, p_time, roi);
 		}
 	}
 	else {
 		FUN_100a81b0("%s ROI Not found\n", name);
+#ifdef BETA10
+		_RPT1(_CRT_ASSERT, "%s ROI Not Found", name);
+		// Note that the macro inserts an INT3, which breaks the assumption that INT3
+		// only occurs as a filler for empty space in the binary.
+#endif
 	}
 
 	return SUCCESS;
@@ -411,23 +431,23 @@ LegoResult LegoROI::FUN_100a8da0(LegoTreeNode* p_node, const Matrix4& p_matrix, 
 
 // FUNCTION: LEGO1 0x100a8e80
 // FUNCTION: BETA10 0x1018ab3a
-void LegoROI::FUN_100a8e80(LegoTreeNode* p_node, Matrix4& p_matrix, LegoTime p_time, LegoROI** p_roiMap)
+void LegoROI::ApplyAnimationTransformation(LegoTreeNode* p_node, Matrix4& p_matrix, LegoTime p_time, LegoROI** p_roiMap)
 {
 	MxMatrix mat;
 
 	LegoAnimNodeData* data = (LegoAnimNodeData*) p_node->GetData();
-	FUN_100a8cb0(data, p_time, mat);
+	CreateLocalTransform(data, p_time, mat);
 
-	LegoROI* roi = p_roiMap[data->GetUnknown0x20()];
+	LegoROI* roi = p_roiMap[data->GetROIIndex()];
 	if (roi != NULL) {
 		roi->m_local2world.Product(mat, p_matrix);
 		roi->UpdateWorldData();
 
-		LegoBool und = data->FUN_100a0990(p_time);
-		roi->SetVisibility(und);
+		LegoBool visiblity = data->GetVisibility(p_time);
+		roi->SetVisibility(visiblity);
 
 		for (LegoU32 i = 0; i < p_node->GetNumChildren(); i++) {
-			FUN_100a8e80(p_node->GetChild(i), roi->m_local2world, p_time, p_roiMap);
+			ApplyAnimationTransformation(p_node->GetChild(i), roi->m_local2world, p_time, p_roiMap);
 		}
 	}
 	else {
@@ -435,26 +455,26 @@ void LegoROI::FUN_100a8e80(LegoTreeNode* p_node, Matrix4& p_matrix, LegoTime p_t
 		local2world.Product(mat, p_matrix);
 
 		for (LegoU32 i = 0; i < p_node->GetNumChildren(); i++) {
-			FUN_100a8e80(p_node->GetChild(i), local2world, p_time, p_roiMap);
+			ApplyAnimationTransformation(p_node->GetChild(i), local2world, p_time, p_roiMap);
 		}
 	}
 }
 
 // FUNCTION: LEGO1 0x100a8fd0
 // FUNCTION: BETA10 0x1018ac81
-void LegoROI::FUN_100a8fd0(LegoTreeNode* p_node, Matrix4& p_matrix, LegoTime p_time, LegoROI** p_roiMap)
+void LegoROI::ApplyTransform(LegoTreeNode* p_node, Matrix4& p_matrix, LegoTime p_time, LegoROI** p_roiMap)
 {
 	MxMatrix mat;
 
 	LegoAnimNodeData* data = (LegoAnimNodeData*) p_node->GetData();
-	FUN_100a8cb0(data, p_time, mat);
+	CreateLocalTransform(data, p_time, mat);
 
-	LegoROI* roi = p_roiMap[data->GetUnknown0x20()];
+	LegoROI* roi = p_roiMap[data->GetROIIndex()];
 	if (roi != NULL) {
 		roi->m_local2world.Product(mat, p_matrix);
 
 		for (LegoU32 i = 0; i < p_node->GetNumChildren(); i++) {
-			FUN_100a8fd0(p_node->GetChild(i), roi->m_local2world, p_time, p_roiMap);
+			ApplyTransform(p_node->GetChild(i), roi->m_local2world, p_time, p_roiMap);
 		}
 	}
 	else {
@@ -462,21 +482,22 @@ void LegoROI::FUN_100a8fd0(LegoTreeNode* p_node, Matrix4& p_matrix, LegoTime p_t
 		local2world.Product(mat, p_matrix);
 
 		for (LegoU32 i = 0; i < p_node->GetNumChildren(); i++) {
-			FUN_100a8fd0(p_node->GetChild(i), local2world, p_time, p_roiMap);
+			ApplyTransform(p_node->GetChild(i), local2world, p_time, p_roiMap);
 		}
 	}
 }
 
 // FUNCTION: LEGO1 0x100a90f0
+// FUNCTION: BETA10 0x1018ada8
 LegoResult LegoROI::SetFrame(LegoAnim* p_anim, LegoTime p_time)
 {
 	LegoTreeNode* root = p_anim->GetRoot();
 	MxMatrix mat;
 
 	mat = m_local2world;
-	mat.SetIdentity();
+	mat.SetIdentity(); // this clears the matrix, assignment above is redundant
 
-	return FUN_100a8da0(root, mat, p_time, this);
+	return ApplyChildAnimationTransformation(root, mat, p_time, this);
 }
 
 // FUNCTION: LEGO1 0x100a9170
@@ -507,6 +528,7 @@ LegoResult LegoROI::SetLodColor(LegoFloat p_red, LegoFloat p_green, LegoFloat p_
 }
 
 // FUNCTION: LEGO1 0x100a9210
+// FUNCTION: BETA10 0x1018af25
 LegoResult LegoROI::SetTextureInfo(LegoTextureInfo* p_textureInfo)
 {
 	LegoResult result = SUCCESS;
@@ -730,6 +752,7 @@ LegoU32 LegoROI::FUN_100a9410(
 }
 
 // FUNCTION: LEGO1 0x100a9a50
+// FUNCTION: BETA10 0x1018bb6b
 TimeROI::TimeROI(Tgl::Renderer* p_renderer, ViewLODList* p_lodList, LegoTime p_time) : LegoROI(p_renderer, p_lodList)
 {
 	m_time = p_time;
@@ -737,7 +760,7 @@ TimeROI::TimeROI(Tgl::Renderer* p_renderer, ViewLODList* p_lodList, LegoTime p_t
 
 // FUNCTION: LEGO1 0x100a9b40
 // FUNCTION: BETA10 0x1018bbf0
-void TimeROI::FUN_100a9b40(Matrix4& p_matrix, LegoTime p_time)
+void TimeROI::CalculateWorldVelocity(Matrix4& p_matrix, LegoTime p_time)
 {
 	LegoTime time = p_time - m_time;
 
@@ -755,6 +778,7 @@ void TimeROI::FUN_100a9b40(Matrix4& p_matrix, LegoTime p_time)
 }
 
 // FUNCTION: LEGO1 0x100a9bf0
+// FUNCTION: BETA10 0x1018bc93
 LegoBool LegoROI::GetRGBAColor(const LegoChar* p_name, float& p_red, float& p_green, float& p_blue, float& p_alpha)
 {
 	if (p_name == NULL) {
@@ -845,12 +869,14 @@ void LegoROI::SetDisplayBB(int p_displayBB)
 }
 
 // FUNCTION: LEGO1 0x100aa340
+// FUNCTION: BETA10 0x1018cca0
 float LegoROI::IntrinsicImportance() const
 {
 	return .5;
 }
 
 // FUNCTION: LEGO1 0x100aa350
+// FUNCTION: BETA10 0x1018ccc0
 void LegoROI::UpdateWorldBoundingVolumes()
 {
 	CalcWorldBoundingVolumes(m_sphere, m_local2world, m_world_bounding_box, m_world_bounding_sphere);

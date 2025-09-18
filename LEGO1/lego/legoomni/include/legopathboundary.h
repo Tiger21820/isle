@@ -31,6 +31,7 @@ typedef set<LegoPathActor*, LegoPathActorSetCompare> LegoPathActorSet;
 typedef set<LegoAnimPresenter*, LegoAnimPresenterSetCompare> LegoAnimPresenterSet;
 
 // VTABLE: LEGO1 0x100d8618
+// VTABLE: BETA10 0x101bdd58
 // SIZE 0x74
 class LegoPathBoundary : public LegoWEGEdge {
 public:
@@ -57,6 +58,7 @@ public:
 	LegoAnimPresenterSet& GetPresenters() { return m_presenters; }
 
 	// SYNTHETIC: LEGO1 0x10047a80
+	// SYNTHETIC: BETA10 0x100bd300
 	// LegoPathBoundary::`vector deleting destructor'
 
 private:
@@ -75,7 +77,7 @@ private:
 // _Tree<LegoPathActor *,LegoPathActor *,set<LegoPathActor *,LegoPathActorSetCompare,allocator<LegoPathActor *> >::_Kfn,LegoPathActorSetCompare,allocator<LegoPathActor *> >::erase
 
 // TEMPLATE: LEGO1 0x1002c440
-// TEMPLATE: BETA10 0x100b6480
+// TEMPLATE: BETA10 0x10020480
 // _Tree<LegoPathActor *,LegoPathActor *,set<LegoPathActor *,LegoPathActorSetCompare,allocator<LegoPathActor *> >::_Kfn,LegoPathActorSetCompare,allocator<LegoPathActor *> >::find
 
 // TEMPLATE: LEGO1 0x1002c4c0
@@ -189,6 +191,12 @@ private:
 
 // TEMPLATE: BETA10 0x10082b40
 // _Tree<LegoAnimPresenter *,LegoAnimPresenter *,set<LegoAnimPresenter *,LegoAnimPresenterSetCompare,allocator<LegoAnimPresenter *> >::_Kfn,LegoAnimPresenterSetCompare,allocator<LegoAnimPresenter *> >::const_iterator::operator*
+
+// TEMPLATE: BETA10 0x100b6440
+// set<LegoAnimPresenter *,LegoAnimPresenterSetCompare,allocator<LegoAnimPresenter *> >::find
+
+// TEMPLATE: BETA10 0x100b6480
+// _Tree<LegoAnimPresenter *,LegoAnimPresenter *,set<LegoAnimPresenter *,LegoAnimPresenterSetCompare,allocator<LegoAnimPresenter *> >::_Kfn,LegoAnimPresenterSetCompare,allocator<LegoAnimPresenter *> >::find
 
 // TEMPLATE: BETA10 0x10021dc0
 // ??0?$Set@PAVLegoPathActor@@ULegoPathActorSetCompare@@@@QAE@ABV0@@Z

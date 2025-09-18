@@ -47,6 +47,7 @@ MxU8 g_buildingInfoDownshift[16] = {
 };
 
 // GLOBAL: LEGO1 0x100f3478
+// GLOBAL: BETA10 0x101e4d78
 LegoBuildingInfo g_buildingInfoInit[16] = {
 	{
 		NULL, "infocen",
@@ -199,10 +200,10 @@ LegoBuildingInfo g_buildingInfoInit[16] = {
 MxU32 LegoBuildingManager::g_maxSound = 6;
 
 // GLOBAL: LEGO1 0x100f373c
-MxU32 g_unk0x100f373c = 0x3c;
+MxU32 g_buildingSoundIdOffset = 0x3c;
 
 // GLOBAL: LEGO1 0x100f3740
-MxU32 g_unk0x100f3740 = 0x42;
+MxU32 g_buildingSoundIdMoodOffset = 0x42;
 
 // clang-format off
 // GLOBAL: LEGO1 0x100f3788
@@ -227,6 +228,8 @@ LegoBuildingInfo g_buildingInfo[16];
 // GLOBAL: LEGO1 0x100f3748
 MxS32 LegoBuildingManager::g_maxMove[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0};
 
+#define HAUS1_INDEX 12
+
 // FUNCTION: LEGO1 0x1002f8b0
 void LegoBuildingManager::configureLegoBuildingManager(MxS32 p_buildingManagerConfig)
 {
@@ -234,8 +237,11 @@ void LegoBuildingManager::configureLegoBuildingManager(MxS32 p_buildingManagerCo
 }
 
 // FUNCTION: LEGO1 0x1002f8c0
+// FUNCTION: BETA10 0x10063a30
 LegoBuildingManager::LegoBuildingManager()
 {
+	// Note that Init() is inlined in BETA10 and the class did not inherit from MxCore,
+	// so the BETA10 match is much better on Init().
 	Init();
 }
 
@@ -245,6 +251,7 @@ LegoBuildingManager::~LegoBuildingManager()
 	delete[] g_customizeAnimFile;
 }
 
+// // FUNCTION: BETA10 0x10063a30 -- see the constructor
 // FUNCTION: LEGO1 0x1002f9d0
 void LegoBuildingManager::Init()
 {
@@ -461,7 +468,7 @@ MxBool LegoBuildingManager::SwitchVariant(LegoEntity* p_entity)
 
 		roi->SetVisibility(FALSE);
 		info->m_variant = g_buildingInfoVariants[m_nextVariant];
-		CreateBuilding(12, CurrentWorld());
+		CreateBuilding(HAUS1_INDEX, CurrentWorld());
 
 		if (info->m_entity != NULL) {
 			info->m_entity->GetROI()->SetVisibility(TRUE);
@@ -548,7 +555,7 @@ MxU32 LegoBuildingManager::GetAnimationId(LegoEntity* p_entity)
 
 // FUNCTION: LEGO1 0x1002ff40
 // FUNCTION: BETA10 0x10064398
-MxU32 LegoBuildingManager::GetSoundId(LegoEntity* p_entity, MxBool p_state)
+MxU32 LegoBuildingManager::GetSoundId(LegoEntity* p_entity, MxBool p_basedOnMood)
 {
 	LegoBuildingInfo* info = GetInfo(p_entity);
 
@@ -556,12 +563,12 @@ MxU32 LegoBuildingManager::GetSoundId(LegoEntity* p_entity, MxBool p_state)
 		return 0;
 	}
 
-	if (p_state) {
-		return info->m_mood + g_unk0x100f3740;
+	if (p_basedOnMood) {
+		return info->m_mood + g_buildingSoundIdMoodOffset;
 	}
 
 	if (info != NULL) {
-		return info->m_sound + g_unk0x100f373c;
+		return info->m_sound + g_buildingSoundIdOffset;
 	}
 
 	return 0;

@@ -549,7 +549,7 @@ MxResult LegoNavController::ProcessJoystickInput(MxBool& p_und)
 				LegoWorld* world = CurrentWorld();
 
 				if (world && world->GetCameraController()) {
-					world->GetCameraController()->FUN_10012320(DTOR(povPosition));
+					world->GetCameraController()->RotateY(DTOR(povPosition));
 					p_und = TRUE;
 				}
 			}
@@ -666,10 +666,10 @@ MxLong LegoNavController::Notify(MxParam& p_param)
 				InfocenterState* state = (InfocenterState*) GameState()->GetState("InfocenterState");
 				assert(state);
 
-				if (state != NULL && state->m_unk0x74 != 8 && currentWorld->Escape()) {
+				if (state != NULL && state->m_state != InfocenterState::e_exitQueried && currentWorld->Escape()) {
 					BackgroundAudioManager()->Stop();
 					TransitionManager()->StartTransition(MxTransitionManager::e_mosaic, 50, FALSE, FALSE);
-					state->m_unk0x74 = 8;
+					state->m_state = InfocenterState::e_exitQueried;
 				}
 			}
 			break;
@@ -691,7 +691,7 @@ MxLong LegoNavController::Notify(MxParam& p_param)
 				for (MxS32 i = 0; i < numPlants; i++) {
 					LegoEntity* entity = plantMgr->CreatePlant(i, NULL, LegoOmni::e_act1);
 
-					if (entity != NULL && !entity->GetUnknown0x10IsSet(LegoEntity::c_altBit1)) {
+					if (entity != NULL && !entity->IsInteraction(LegoEntity::c_disabled)) {
 						LegoROI* roi = entity->GetROI();
 
 						if (roi != NULL && roi->GetVisibility()) {
@@ -701,7 +701,7 @@ MxLong LegoNavController::Notify(MxParam& p_param)
 								Mx3DPointFloat roiPosition(roi->GetWorldPosition());
 								roiPosition -= viewPosition;
 
-								if (roiPosition.LenSquared() < 2000.0 || roi->GetUnknown0xe0() > 0) {
+								if (roiPosition.LenSquared() < 2000.0 || roi->GetLodLevel() > 0) {
 									entity->ClickAnimation();
 								}
 							}
@@ -864,7 +864,7 @@ MxLong LegoNavController::Notify(MxParam& p_param)
 							}
 
 							GameState()->SetCurrentAct(LegoGameState::e_act3);
-							act3State->m_unk0x08 = 2;
+							act3State->m_state = Act3State::e_goodEnding;
 							GameState()->m_currentArea = LegoGameState::e_act3script;
 							GameState()->SwitchArea(LegoGameState::e_infomain);
 							break;
@@ -878,7 +878,7 @@ MxLong LegoNavController::Notify(MxParam& p_param)
 							}
 
 							GameState()->SetCurrentAct(LegoGameState::e_act3);
-							act3State->m_unk0x08 = 3;
+							act3State->m_state = Act3State::e_badEnding;
 							GameState()->m_currentArea = LegoGameState::e_act3script;
 							GameState()->SwitchArea(LegoGameState::e_infomain);
 							break;
@@ -896,7 +896,7 @@ MxLong LegoNavController::Notify(MxParam& p_param)
 					break;
 				case 'A':
 					if (g_animationCalcStep == 1) {
-						Lego()->m_unk0x13c = TRUE;
+						Lego()->m_initialized = TRUE;
 						AnimationManager()->FUN_10060570(TRUE);
 						g_animationCalcStep = 0;
 					}

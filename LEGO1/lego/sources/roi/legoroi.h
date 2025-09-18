@@ -17,6 +17,7 @@ class LegoTreeNode;
 struct LegoAnimActorEntry;
 
 // VTABLE: LEGO1 0x100dbe38
+// VTABLE: BETA10 0x101c3898
 // SIZE 0x108
 class LegoROI : public ViewROI {
 public:
@@ -25,16 +26,26 @@ public:
 	~LegoROI() override;
 
 	LegoResult Read(
-		OrientableROI* p_unk0xd4,
+		OrientableROI* p_parentROI,
 		Tgl::Renderer* p_renderer,
 		ViewLODListManager* p_viewLODListManager,
 		LegoTextureContainer* p_textureContainer,
 		LegoStorage* p_storage
 	);
 	LegoROI* FindChildROI(const LegoChar* p_name, LegoROI* p_roi);
-	LegoResult FUN_100a8da0(LegoTreeNode* p_node, const Matrix4& p_matrix, LegoTime p_time, LegoROI* p_roi);
-	static void FUN_100a8e80(LegoTreeNode* p_node, Matrix4& p_matrix, LegoTime p_time, LegoROI** p_roiMap);
-	static void FUN_100a8fd0(LegoTreeNode* p_node, Matrix4& p_matrix, LegoTime p_time, LegoROI** p_roiMap);
+	LegoResult ApplyChildAnimationTransformation(
+		LegoTreeNode* p_node,
+		const Matrix4& p_matrix,
+		LegoTime p_time,
+		LegoROI* p_roi
+	);
+	static void ApplyAnimationTransformation(
+		LegoTreeNode* p_node,
+		Matrix4& p_matrix,
+		LegoTime p_time,
+		LegoROI** p_roiMap
+	);
+	static void ApplyTransform(LegoTreeNode* p_node, Matrix4& p_matrix, LegoTime p_time, LegoROI** p_roiMap);
 	LegoResult SetFrame(LegoAnim* p_anim, LegoTime p_time);
 	LegoResult SetLodColor(LegoFloat p_red, LegoFloat p_green, LegoFloat p_blue, LegoFloat p_alpha);
 	LegoResult SetTextureInfo(LegoTextureInfo* p_textureInfo);
@@ -51,8 +62,8 @@ public:
 	void ClearMeshOffset();
 	void SetDisplayBB(int p_displayBB);
 
-	static LegoResult FUN_100a8cb0(LegoAnimNodeData* p_data, LegoTime p_time, Matrix4& p_matrix);
-	static void FUN_100a81b0(const LegoChar* p_error, const LegoChar* p_name);
+	static LegoResult CreateLocalTransform(LegoAnimNodeData* p_data, LegoTime p_time, Matrix4& p_matrix);
+	static void FUN_100a81b0(const LegoChar* p_error, ...);
 	static void configureLegoROI(int p_roi);
 	static void SetColorOverride(ColorOverride p_colorOverride);
 	static LegoBool GetRGBAColor(const LegoChar* p_name, float& p_red, float& p_green, float& p_blue, float& p_alpha);
@@ -81,25 +92,31 @@ public:
 	void SetBoundingBox(const BoundingBox& p_box) { m_bounding_box = p_box; }
 
 	// SYNTHETIC: LEGO1 0x100a82b0
+	// SYNTHETIC: BETA10 0x1018c490
 	// LegoROI::`scalar deleting destructor'
 
 private:
-	LegoChar* m_name;        // 0xe4
-	BoundingSphere m_sphere; // 0xe8
-	undefined m_unk0x100;    // 0x100
-	LegoEntity* m_entity;    // 0x104
+	LegoChar* m_name;         // 0xe4
+	BoundingSphere m_sphere;  // 0xe8
+	LegoBool m_sharedLodList; // 0x100
+	LegoEntity* m_entity;     // 0x104
 };
 
 // VTABLE: LEGO1 0x100dbea8
+// VTABLE: BETA10 0x101c38d0
 // SIZE 0x10c
 class TimeROI : public LegoROI {
 public:
 	TimeROI(Tgl::Renderer* p_renderer, ViewLODList* p_lodList, LegoTime p_time);
 
+	void CalculateWorldVelocity(Matrix4& p_matrix, LegoTime p_time);
+
 	// SYNTHETIC: LEGO1 0x100a9ad0
+	// SYNTHETIC: BETA10 0x1018c540
 	// TimeROI::`scalar deleting destructor'
 
-	void FUN_100a9b40(Matrix4& p_matrix, LegoTime p_time);
+	// SYNTHETIC: BETA10 0x1018c580
+	// TimeROI::~TimeROI
 
 private:
 	LegoTime m_time; // 0x108

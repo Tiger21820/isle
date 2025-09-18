@@ -5,8 +5,8 @@
 #include "isle.h"
 #include "jukebox_actions.h"
 #include "legoanimationmanager.h"
+#include "legoanimpresenter.h"
 #include "legocontrolmanager.h"
-#include "legohideanimpresenter.h"
 #include "legomain.h"
 #include "legonavcontroller.h"
 #include "legopathstruct.h"
@@ -68,6 +68,7 @@ const LegoChar* g_strCRCEDGEY0 = "C_RCEDGEY0";
 MxS32 g_unk0x100f0c7c = 2;
 
 // FUNCTION: LEGO1 0x10016a90
+// FUNCTION: BETA10 0x100c82e8
 CarRace::CarRace()
 {
 	m_skeleton = NULL;
@@ -95,7 +96,7 @@ MxResult CarRace::Create(MxDSAction& p_dsAction)
 
 	m_raceState = raceState;
 
-	m_act1State->m_unk0x018 = 6;
+	m_act1State->m_state = Act1State::e_transitionToRacecar;
 	m_unk0x144 = -1;
 	m_unk0x148 = -1;
 	m_unk0x14c = -1;
@@ -124,7 +125,7 @@ void CarRace::ReadyWorld()
 
 	BackgroundAudioManager()->PlayMusic(action, 5, MxPresenter::e_repeating);
 	AnimationManager()->Resume();
-	FUN_10015820(FALSE, LegoOmni::c_disableInput | LegoOmni::c_disable3d | LegoOmni::c_clearScreen);
+	Disable(FALSE, LegoOmni::c_disableInput | LegoOmni::c_disable3d | LegoOmni::c_clearScreen);
 
 	m_unk0x144 = g_unk0x100d5d10[rand() & 7];
 
@@ -179,7 +180,7 @@ MxLong CarRace::HandlePathStruct(LegoPathStructNotificationParam& p_param)
 {
 	MxLong result = 0;
 
-	if (p_param.GetTrigger() == 68) {
+	if (p_param.GetTrigger() == LegoPathStruct::c_d) {
 		MxEntity* sender = (MxEntity*) p_param.GetSender();
 		MxS32 paramData = p_param.GetData();
 
@@ -244,7 +245,7 @@ MxLong CarRace::HandlePathStruct(LegoPathStructNotificationParam& p_param)
 					VariableTable()->SetVariable(g_strHIT_WALL_SOUND, "");
 					NavController()->SetDeadZone(NavController()->GetDefaultDeadZone());
 					NavController()->SetTrackDefault(1);
-					LegoRaceCar::FUN_10012de0();
+					LegoRaceCar::InitYouCantStopSound();
 					m_raceState->m_unk0x28 = 2;
 
 					RaceState::Entry* raceState = m_raceState->GetState(GameState()->GetActorId());
@@ -333,32 +334,30 @@ MxLong CarRace::HandlePathStruct(LegoPathStructNotificationParam& p_param)
 }
 
 // FUNCTION: LEGO1 0x10017650
-MxLong CarRace::HandleClick(LegoEventNotificationParam& p_param)
+MxLong CarRace::HandleControl(LegoControlManagerNotificationParam& p_param)
 {
-	LegoControlManagerNotificationParam* param = (LegoControlManagerNotificationParam*) &p_param;
-
-	if (param->m_unk0x28 == 1) {
-		switch (param->m_clickedObjectId) {
+	if (p_param.m_enabledChild == 1) {
+		switch (p_param.m_clickedObjectId) {
 		case 3:
 			InvokeAction(Extra::e_stop, *g_carraceScript, CarraceScript::c_irtx08ra_PlayWav, NULL);
-			m_act1State->m_unk0x018 = 0;
+			m_act1State->m_state = Act1State::e_none;
 			VariableTable()->SetVariable(g_raceState, "");
 			VariableTable()->SetVariable(g_strHIT_WALL_SOUND, "");
 			NavController()->SetDeadZone(NavController()->GetDefaultDeadZone());
 			NavController()->SetTrackDefault(1);
-			LegoRaceCar::FUN_10012de0();
+			LegoRaceCar::InitYouCantStopSound();
 			m_destLocation = LegoGameState::e_infomain;
 			TransitionManager()->StartTransition(MxTransitionManager::e_mosaic, 50, FALSE, FALSE);
 			GameState()->GetBackgroundColor()->SetValue("reset");
 			break;
 		case 98:
 			InvokeAction(Extra::e_stop, *g_carraceScript, CarraceScript::c_irtx08ra_PlayWav, NULL);
-			m_act1State->m_unk0x018 = 0;
+			m_act1State->m_state = Act1State::e_none;
 			VariableTable()->SetVariable(g_raceState, "");
 			VariableTable()->SetVariable(g_strHIT_WALL_SOUND, "");
 			NavController()->SetDeadZone(NavController()->GetDefaultDeadZone());
 			NavController()->SetTrackDefault(1);
-			LegoRaceCar::FUN_10012de0();
+			LegoRaceCar::InitYouCantStopSound();
 			m_destLocation = LegoGameState::e_carraceExterior;
 			TransitionManager()->StartTransition(MxTransitionManager::e_mosaic, 50, FALSE, FALSE);
 			GameState()->GetBackgroundColor()->SetValue("reset");
@@ -415,14 +414,14 @@ MxBool CarRace::Escape()
 
 	AnimationManager()->FUN_10061010(FALSE);
 	DeleteObjects(&m_atomId, 500, 999);
-	m_act1State->m_unk0x018 = 0;
+	m_act1State->m_state = Act1State::e_none;
 	VariableTable()->SetVariable(g_strHIT_WALL_SOUND, "");
 
 	VariableTable()->SetVariable(g_raceState, "");
 	NavController()->SetDeadZone(NavController()->GetDefaultDeadZone());
 
 	NavController()->SetTrackDefault(1);
-	LegoRaceCar::FUN_10012de0();
+	LegoRaceCar::InitYouCantStopSound();
 
 	GameState()->GetBackgroundColor()->SetValue("reset");
 	m_destLocation = LegoGameState::e_infomain;

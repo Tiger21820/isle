@@ -58,7 +58,8 @@ public:
 	// FUNCTION: LEGO1 0x1002f930
 	const char* ClassName() const override // vtable+0x0c
 	{
-		// not in BETA10
+		// While this class exists in BETA10, it didn't have a ClassName().
+		// The constructor suggests that it did not inherit from MxCore back then and did not have a VTABLE.
 		// STRING: LEGO1 0x100f37d0
 		return "LegoBuildingManager";
 	}
@@ -78,7 +79,7 @@ public:
 	MxBool SwitchMove(LegoEntity* p_entity);
 	MxBool SwitchMood(LegoEntity* p_entity);
 	MxU32 GetAnimationId(LegoEntity* p_entity);
-	MxU32 GetSoundId(LegoEntity* p_entity, MxBool p_state);
+	MxU32 GetSoundId(LegoEntity* p_entity, MxBool p_basedOnMood);
 	MxBool DecrementCounter(LegoEntity* p_entity);
 	MxBool DecrementCounter(MxS32 p_index);
 	MxBool DecrementCounter(LegoBuildingInfo* p_data);

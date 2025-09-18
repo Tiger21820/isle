@@ -38,3 +38,17 @@ targets:
         - 0x100fb080
         # memset etc.
         - 0x100f9570
+      name-substitutions:
+        # Rename matched functions named like `FUN_12345678` to `LEGO1_12345678`
+        # so we can distinguish them from non-matched functions
+        - ["FUN_([0-9a-f]{8})", "LEGO1_\\1"]
+  ALPHA:
+    filename: ALPHA.DLL
+    source-root: LEGO1
+    hash:
+      sha256: dc7e5ed8ec9d96851126a40c4d23755f1783a8df61def44c667dfaa992ac509e
+  CONFIGD:
+    filename: CONFIGD.EXE
+    source-root: .
+    hash:
+      sha256: 9d2b7de2e53eee99cce24a64777a08a7f919a0401a393d9494bce27ef2e24c39

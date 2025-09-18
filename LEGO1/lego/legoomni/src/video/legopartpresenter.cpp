@@ -37,7 +37,7 @@ MxResult LegoPartPresenter::AddToManager()
 // FUNCTION: LEGO1 0x1007c9d0
 void LegoPartPresenter::Destroy(MxBool p_fromDestructor)
 {
-	m_criticalSection.Enter();
+	ENTER(m_criticalSection);
 	VideoManager()->UnregisterPresenter(*this);
 
 	if (m_parts) {
@@ -187,7 +187,7 @@ MxResult LegoPartPresenter::Read(MxDSChunk& p_chunk)
 			}
 
 			if (j == 0) {
-				if (surplusLODs != 0 && lod->GetUnknown0x08Test8()) {
+				if (surplusLODs != 0 && lod->IsExtraLOD()) {
 					numLODs++;
 					surplusLODs--;
 				}

@@ -221,7 +221,7 @@ function(add_lego_libraries NAME)
     LEGO1/omni/src/common/mxcore.cpp
     LEGO1/omni/src/common/mxstring.cpp
     LEGO1/omni/src/audio/mxsoundmanager.cpp
-    LEGO1/omni/src/main/mxomni.cpp
+    LEGO1/omni/src/main/mxmain.cpp
     LEGO1/omni/src/notify/mxactionnotificationparam.cpp
     LEGO1/omni/src/main/mxomnicreateflags.cpp
     LEGO1/omni/src/main/mxomnicreateparam.cpp
@@ -240,7 +240,7 @@ function(add_lego_libraries NAME)
     LEGO1/omni/src/common/mxutilities.cpp
     LEGO1/omni/src/common/mxvariabletable.cpp
     LEGO1/omni/src/stream/mxdssubscriber.cpp
-    LEGO1/omni/src/common/mxmediamanager.cpp
+    LEGO1/omni/src/common/mxpresentationmanager.cpp
     LEGO1/omni/src/system/mxticklethread.cpp
     LEGO1/omni/src/audio/mxaudiomanager.cpp
     LEGO1/omni/src/system/mxautolock.cpp
@@ -376,9 +376,6 @@ function(add_lego_libraries NAME)
     LEGO1/lego/legoomni/src/entity/legoworldpresenter.cpp
     LEGO1/lego/legoomni/src/actors/dunebuggy.cpp
     LEGO1/lego/legoomni/src/video/legoanimpresenter.cpp
-    LEGO1/lego/legoomni/src/video/legoloopinganimpresenter.cpp
-    LEGO1/lego/legoomni/src/video/legolocomotionanimpresenter.cpp
-    LEGO1/lego/legoomni/src/video/legohideanimpresenter.cpp
     LEGO1/lego/legoomni/src/worlds/infocenter.cpp
     LEGO1/lego/legoomni/src/race/raceskel.cpp
     LEGO1/lego/legoomni/src/worlds/act3.cpp
@@ -483,7 +480,12 @@ if(ISLE_BUILD_BETA10)
     OUT_TARGETS beta10_targets
   )
   reccmp_add_target(beta10 ID BETA10)
+
+  # Enable `#ifdef BETA10` conditions
   target_compile_definitions(beta10 PRIVATE BETA10)
+  foreach(tgt IN LISTS beta10_targets)
+    target_compile_definitions(${tgt} PRIVATE BETA10)
+  endforeach()
 endif()
 
 if (ISLE_BUILD_APP)
@@ -587,6 +589,11 @@ if (MSVC_FOR_DECOMP)
     set_property(TARGET isle ${lego1_targets} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   endif()
 
+  if (ISLE_BUILD_CONFIG)
+    target_link_options(config PRIVATE "/OPT:REF")
+    target_link_libraries(config PRIVATE mfc42)
+  endif()
+
   if (ISLE_INCLUDE_ENTROPY)
     message(STATUS "Using entropy file: ${ISLE_ENTROPY_FILENAME}")
     foreach(tgt IN LISTS lego1_targets beta10_targets)
@@ -600,10 +607,13 @@ if (MSVC_FOR_DECOMP)
     endif()
   endif()
 
+  # Setting the MSVC_RUNTIME_LIBRARY for all libraries as well as `lego1` produces the results
+  # that are most consistent with the LEGO1.DLL and BETA10.DLL originals we have.
+  # Equivalent to target_compile_options(... PRIVATE "/MT$<$<CONFIG:Debug>:d>")
+  set_property(TARGET ${lego1_targets} ${beta10_targets} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   if(TARGET lego1)
     target_link_options(lego1 PRIVATE "/OPT:REF")
-    # Equivalent to target_compile_options(... PRIVATE "/MT$<$<CONFIG:Debug>:d>")
-    set_property(TARGET lego1 ${lego1_targets} ${beta10_targets} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set_property(TARGET lego1 PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   endif()
 
   set(CMAKE_CXX_FLAGS "/W3 /GX /D \"WIN32\" /D \"_WINDOWS\"")

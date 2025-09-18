@@ -18,14 +18,20 @@ class MxQuaternionTransformer;
 
 // SIZE 0x0c
 struct Act3ListElement {
-	MxU32 m_objectId;     // 0x00
-	undefined4 m_unk0x04; // 0x04
-	undefined m_unk0x08;  // 0x08
+	enum InsertMode {
+		e_replaceAction = 1,
+		e_queueAction = 2,
+		e_onlyIfEmpty = 3
+	};
+
+	MxU32 m_objectId;        // 0x00
+	InsertMode m_insertMode; // 0x04
+	MxBool m_hasStarted;     // 0x08
 
 	Act3ListElement() {}
 
-	Act3ListElement(MxU32 p_objectId, undefined4 p_unk0x04, undefined p_unk0x08)
-		: m_objectId(p_objectId), m_unk0x04(p_unk0x04), m_unk0x08(p_unk0x08)
+	Act3ListElement(MxU32 p_objectId, InsertMode p_insertMode, MxBool p_hasStarted)
+		: m_objectId(p_objectId), m_insertMode(p_insertMode), m_hasStarted(p_hasStarted)
 	{
 	}
 
@@ -36,15 +42,15 @@ struct Act3ListElement {
 // SIZE 0x10
 class Act3List : private list<Act3ListElement> {
 public:
-	Act3List() { m_unk0x0c = 0; }
+	Act3List() { m_cleared = FALSE; }
 
-	void Insert(MxS32 p_objectId, MxS32 p_option);
-	void FUN_10071fa0();
+	void Insert(MxS32 p_objectId, Act3ListElement::InsertMode p_option);
+	void DeleteActionWrapper();
 	void Clear();
-	void FUN_100720d0(MxU32 p_objectId);
+	void RemoveByObjectIdOrFirst(MxU32 p_objectId);
 
 private:
-	undefined4 m_unk0x0c; // 0x0c
+	MxU32 m_cleared; // 0x0c
 };
 
 // VTABLE: LEGO1 0x100d4fc8
@@ -52,7 +58,14 @@ private:
 // SIZE 0x0c
 class Act3State : public LegoState {
 public:
-	Act3State() { m_unk0x08 = 0; }
+	enum {
+		e_initial = 0,
+		e_ready = 1,
+		e_goodEnding = 2,
+		e_badEnding = 3,
+	};
+
+	Act3State() { m_state = Act3State::e_initial; }
 
 	// FUNCTION: LEGO1 0x1000e2f0
 	MxBool IsSerializable() override { return FALSE; }
@@ -74,11 +87,11 @@ public:
 	// SYNTHETIC: LEGO1 0x1000e3c0
 	// Act3State::`scalar deleting destructor'
 
-	undefined4 GetUnknown0x08() { return m_unk0x08; }
+	MxU32 GetState() { return m_state; }
 
 	// TODO: Most likely getters/setters are not used according to BETA.
 
-	undefined4 m_unk0x08; // 0x08
+	MxU32 m_state; // 0x08
 };
 
 // VTABLE: LEGO1 0x100d9628
@@ -93,7 +106,7 @@ public:
 	MxResult Tickle() override;               // vtable+0x08
 
 	// FUNCTION: LEGO1 0x10072500
-	MxBool VTable0x5c() override { return TRUE; } // vtable+0x5c
+	MxBool WaitForTransition() override { return TRUE; } // vtable+0x5c
 
 	// FUNCTION: LEGO1 0x10072510
 	// FUNCTION: BETA10 0x10017550
@@ -129,7 +142,7 @@ public:
 	void RemoveDonut(Act3Ammo& p_p);
 	MxResult ShootPizza(LegoPathController* p_controller, Vector3& p_location, Vector3& p_direction, Vector3& p_up);
 	MxResult ShootDonut(LegoPathController* p_controller, Vector3& p_location, Vector3& p_direction, Vector3& p_up);
-	void FUN_10072ad0(undefined4 p_param1);
+	void TriggerHitSound(undefined4 p_param1);
 	MxResult FUN_10073360(Act3Ammo& p_ammo, const Vector3& p_param2);
 	MxResult FUN_10073390(Act3Ammo& p_ammo, const Vector3& p_param2);
 	void SetBrickster(Act3Brickster* p_brickster);
@@ -168,12 +181,12 @@ protected:
 	Helicopter* m_copter;               // 0x420c
 	Act3Shark* m_shark;                 // 0x4210
 	MxFloat m_time;                     // 0x4214
-	MxU8 m_unk0x4218;                   // 0x4218
-	MxU8 m_unk0x4219;                   // 0x4219
-	MxU8 m_unk0x421a;                   // 0x421a
-	MxU8 m_unk0x421b;                   // 0x421b
-	MxU8 m_unk0x421c;                   // 0x421c
-	MxU8 m_unk0x421d;                   // 0x421d
+	MxU8 m_pizzaHitSound;               // 0x4218
+	MxU8 m_pizzaMissSound;              // 0x4219
+	MxU8 m_copDonutSound;               // 0x421a
+	MxU8 m_donutMissSound;              // 0x421b
+	MxU8 m_islanderSound;               // 0x421c
+	MxU8 m_bricksterDonutSound;         // 0x421d
 	undefined m_unk0x421e;              // 0x421e
 	Act3List m_unk0x4220;               // 0x4220
 	MxPresenter* m_helicopterDots[15];  // 0x4230

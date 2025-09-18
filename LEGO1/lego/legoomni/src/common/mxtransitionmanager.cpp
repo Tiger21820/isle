@@ -18,6 +18,7 @@ DECOMP_SIZE_ASSERT(MxTransitionManager, 0x900)
 RECT g_fullScreenRect = {0, 0, 640, 480};
 
 // FUNCTION: LEGO1 0x1004b8d0
+// FUNCTION: BETA10 0x100ec2c0
 MxTransitionManager::MxTransitionManager()
 {
 	m_animationTimer = 0;
@@ -120,15 +121,9 @@ MxResult MxTransitionManager::StartTransition(
 
 		m_animationSpeed = p_speed;
 
-		MxTickleManager* tickleManager = TickleManager();
-		tickleManager->RegisterClient(this, p_speed);
-
-		LegoInputManager* inputManager = InputManager();
-		inputManager->SetUnknown88(TRUE);
-		inputManager->SetUnknown336(FALSE);
-
-		LegoVideoManager* videoManager = VideoManager();
-		videoManager->SetRender3D(FALSE);
+		TickleManager()->RegisterClient(this, p_speed);
+		InputManager()->DisableInputProcessing();
+		VideoManager()->SetRender3D(FALSE);
 
 		SetAppCursor(e_cursorBusy);
 		return SUCCESS;

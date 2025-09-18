@@ -88,11 +88,11 @@ void DuneBuggy::Exit()
 // FUNCTION: LEGO1 0x10068060
 MxLong DuneBuggy::HandleClick()
 {
-	if (!FUN_1003ef60()) {
+	if (!CanExit()) {
 		return 1;
 	}
 
-	FUN_10015820(TRUE, 0);
+	Disable(TRUE, 0);
 
 	((Isle*) CurrentWorld())->SetDestLocation(LegoGameState::Area::e_dunecar);
 	TransitionManager()->StartTransition(MxTransitionManager::e_mosaic, 50, FALSE, TRUE);
@@ -121,7 +121,7 @@ MxLong DuneBuggy::HandleControl(LegoControlManagerNotificationParam& p_param)
 {
 	MxLong result = 0;
 
-	if (p_param.m_unk0x28 == 1) {
+	if (p_param.m_enabledChild == 1) {
 		switch (p_param.m_clickedObjectId) {
 		case IsleScript::c_DuneCarArms_Ctl:
 			Exit();
@@ -137,7 +137,7 @@ MxLong DuneBuggy::HandleControl(LegoControlManagerNotificationParam& p_param)
 		case IsleScript::c_DuneCarHorn_Ctl:
 			MxSoundPresenter* presenter =
 				(MxSoundPresenter*) CurrentWorld()->Find("MxSoundPresenter", "DuneCarHorn_Sound");
-			presenter->Enable(p_param.m_unk0x28);
+			presenter->Enable(p_param.m_enabledChild);
 			break;
 		}
 	}
@@ -192,8 +192,8 @@ void DuneBuggy::ActivateSceneActions()
 	PlayMusic(JukeboxScript::c_GarageArea_Music);
 
 	Act1State* act1state = (Act1State*) GameState()->GetState("Act1State");
-	if (!act1state->m_unk0x022) {
-		act1state->m_unk0x022 = TRUE;
+	if (!act1state->m_playedExitExplanation) {
+		act1state->m_playedExitExplanation = TRUE;
 
 		MxMatrix mat(UserActor()->GetROI()->GetLocal2World());
 		mat.TranslateBy(mat[2][0] * 2.5, mat[2][1] + 0.7, mat[2][2] * 2.5);

@@ -2,8 +2,8 @@
 
 #include "mxbitmap.h"
 #include "mxdebug.h"
+#include "mxmain.h"
 #include "mxmisc.h"
-#include "mxomni.h"
 #include "mxpalette.h"
 #include "mxutilities.h"
 #include "mxvideomanager.h"
@@ -42,20 +42,22 @@ void MxDisplaySurface::Init()
 }
 
 // FUNCTION: LEGO1 0x100ba640
+// FUNCTION: BETA10 0x1013f506
 void MxDisplaySurface::ClearScreen()
 {
+	MxS32 i;
 	MxS32 backBuffers;
 	DDSURFACEDESC desc;
 	HRESULT hr;
 
-	if (!m_videoParam.Flags().GetFlipSurfaces()) {
-		backBuffers = 1;
-	}
-	else {
+	if (m_videoParam.Flags().GetFlipSurfaces()) {
 		backBuffers = m_videoParam.GetBackBuffers() + 1;
 	}
+	else {
+		backBuffers = 1;
+	}
 
-	for (MxS32 i = 0; i < backBuffers; i++) {
+	for (i = 0; i < backBuffers; i++) {
 		memset(&desc, 0, sizeof(DDSURFACEDESC));
 
 		desc.dwSize = sizeof(DDSURFACEDESC);
@@ -371,7 +373,7 @@ void MxDisplaySurface::VTable0x28(
 
 	MxU8* data = p_bitmap->GetStart(p_left, p_top);
 
-	if (m_videoParam.Flags().GetF1bit3()) {
+	if (m_videoParam.Flags().GetDoubleScaling()) {
 		p_bottom *= 2;
 		p_right *= 2;
 
@@ -823,7 +825,7 @@ void MxDisplaySurface::VTable0x34(MxU8* p_pixels, MxS32 p_bpp, MxS32 p_width, Mx
 // FUNCTION: LEGO1 0x100bba50
 void MxDisplaySurface::Display(MxS32 p_left, MxS32 p_top, MxS32 p_left2, MxS32 p_top2, MxS32 p_width, MxS32 p_height)
 {
-	if (m_videoParam.Flags().GetF2bit1()) {
+	if (m_videoParam.Flags().GetEnabled()) {
 		if (m_videoParam.Flags().GetFlipSurfaces()) {
 			if (g_unk0x1010215c < 2) {
 				g_unk0x1010215c++;
@@ -861,7 +863,7 @@ void MxDisplaySurface::Display(MxS32 p_left, MxS32 p_top, MxS32 p_left2, MxS32 p
 			DDBLTFX data;
 			memset(&data, 0, sizeof(data));
 			data.dwSize = sizeof(data);
-			data.dwDDFX = 8;
+			data.dwDDFX = DDBLTFX_NOTEARING;
 
 			if (m_ddSurface1->Blt((LPRECT) &b, m_ddSurface2, (LPRECT) &a, 0, &data) == DDERR_SURFACELOST) {
 				m_ddSurface1->Restore();
@@ -1169,7 +1171,7 @@ void MxDisplaySurface::VTable0x24(
 
 	MxU8* data = p_bitmap->GetStart(p_left, p_top);
 
-	if (m_videoParam.Flags().GetF1bit3()) {
+	if (m_videoParam.Flags().GetDoubleScaling()) {
 		p_bottom *= 2;
 		p_right *= 2;
 

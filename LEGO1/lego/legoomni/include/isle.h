@@ -34,6 +34,21 @@ public:
 		c_floor3
 	};
 
+	enum {
+		e_none = 0,
+		e_initial = 1,
+		e_elevator = 2,
+		e_pizza = 3,
+		e_helicopter = 4,
+		e_transitionToJetski = 5,
+		e_transitionToRacecar = 6,
+		e_transitionToTowtrack = 7,
+		e_towtrack = 8,
+		e_transitionToAmbulance = 9,
+		e_ambulance = 10,
+		e_jukebox = 11,
+	};
+
 	Act1State();
 
 	// FUNCTION: LEGO1 0x100338a0
@@ -58,13 +73,13 @@ public:
 	void RemoveActors();
 	void PlaceActors();
 
-	MxU32 GetUnknown18() { return m_unk0x018; }
+	MxU32 GetState() { return m_state; }
 	ElevatorFloor GetElevatorFloor() { return (ElevatorFloor) m_elevFloor; }
-	MxU8 GetUnknown21() { return m_unk0x021; }
+	MxBool IsSpawnInInfocenter() { return m_spawnInInfocenter; }
 
-	void SetUnknown18(MxU32 p_unk0x18) { m_unk0x018 = p_unk0x18; }
+	void SetState(MxU32 p_state) { m_state = p_state; }
 	void SetElevatorFloor(ElevatorFloor p_elevFloor) { m_elevFloor = p_elevFloor; }
-	void SetUnknown21(MxU8 p_unk0x21) { m_unk0x021 = p_unk0x21; }
+	void SetSpawnInInfocenter(MxBool p_spawnInInfocenter) { m_spawnInInfocenter = p_spawnInInfocenter; }
 
 	// SYNTHETIC: LEGO1 0x10033960
 	// Act1State::`scalar deleting destructor'
@@ -73,13 +88,13 @@ public:
 
 	Playlist m_cptClickDialogue;                  // 0x008
 	IsleScript::Script m_currentCptClickDialogue; // 0x014
-	MxU32 m_unk0x018;                             // 0x018
+	MxU32 m_state;                                // 0x018
 	MxS16 m_elevFloor;                            // 0x01c
-	MxBool m_unk0x01e;                            // 0x01e
-	MxBool m_unk0x01f;                            // 0x01f
+	MxBool m_playingFloor2Animation;              // 0x01e
+	MxBool m_switchedToArea;                      // 0x01f
 	MxBool m_planeActive;                         // 0x020
-	undefined m_unk0x021;                         // 0x021
-	MxBool m_unk0x022;                            // 0x022
+	MxBool m_spawnInInfocenter;                   // 0x021
+	MxBool m_playedExitExplanation;               // 0x022
 	undefined m_unk0x023;                         // 0x023
 	LegoNamedPlane m_motocyclePlane;              // 0x024
 	LegoNamedPlane m_bikePlane;                   // 0x070
@@ -119,7 +134,7 @@ public:
 	MxLong Notify(MxParam& p_param) override; // vtable+0x04
 
 	// FUNCTION: LEGO1 0x10030900
-	MxBool VTable0x5c() override { return TRUE; } // vtable+0x5c
+	MxBool WaitForTransition() override { return TRUE; } // vtable+0x5c
 
 	// FUNCTION: LEGO1 0x10030910
 	// FUNCTION: BETA10 0x10035d70
@@ -135,18 +150,18 @@ public:
 		return !strcmp(p_name, Isle::ClassName()) || LegoWorld::IsA(p_name);
 	}
 
-	MxResult Create(MxDSAction& p_dsAction) override; // vtable+0x18
-	void ReadyWorld() override;                       // vtable+0x50
-	void Add(MxCore* p_object) override;              // vtable+0x58
-	void VTable0x60() override;                       // vtable+0x60
-	MxBool Escape() override;                         // vtable+0x64
-	void Enable(MxBool p_enable) override;            // vtable+0x68
-	virtual void VTable0x6c(LegoPathActor* p_actor);  // vtable+0x6c
+	MxResult Create(MxDSAction& p_dsAction) override;   // vtable+0x18
+	void ReadyWorld() override;                         // vtable+0x50
+	void Add(MxCore* p_object) override;                // vtable+0x58
+	void VTable0x60() override;                         // vtable+0x60
+	MxBool Escape() override;                           // vtable+0x64
+	void Enable(MxBool p_enable) override;              // vtable+0x68
+	virtual void RemoveVehicle(LegoPathActor* p_actor); // vtable+0x6c
 
 	void SetDestLocation(LegoGameState::Area p_destLocation) { m_destLocation = p_destLocation; }
 	MxBool HasHelicopter() { return m_helicopter != NULL; }
 
-	void FUN_10033350();
+	void SwitchToInfocenter();
 
 	friend class Act1State;
 
@@ -160,13 +175,13 @@ protected:
 	MxLong HandleTransitionEnd();
 	void HandleElevatorEndAction();
 	void UpdateGlobe();
-	void FUN_10032620();
+	void CheckAreaExiting();
 	void CreateState();
-	void FUN_10032d30(
+	void TransitionToOverlay(
 		IsleScript::Script p_script,
 		JukeboxScript::Script p_music,
 		const char* p_cameraLocation,
-		MxBool p_und
+		MxBool p_setCamera
 	);
 
 	Act1State* m_act1state;             // 0xf8
