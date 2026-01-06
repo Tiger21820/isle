@@ -43,7 +43,7 @@ MxFloat g_unk0x100da044 = 8.0f;
 LegoCarRaceActor::LegoCarRaceActor()
 {
 	m_unk0x08 = 1.0f;
-	m_unk0x70 = 0.0f;
+	m_lastPathStruct = 0.0f;
 	m_animState = 0;
 	m_maxLinearVel = 0.0f;
 	m_frequencyFactor = 1.0f;
@@ -75,8 +75,8 @@ void LegoCarRaceActor::FUN_10080590(float p_time)
 	LegoPathActor* userActor = UserActor();
 
 	if (userActor) {
-		// All known implementations of LegoPathActor->VTable0x5c() return LegoPathActor::m_unk0x70
-		deltaUnk0x70 = m_unk0x70 - userActor->VTable0x5c();
+		// All known implementations of LegoPathActor->GetLastPathStruct() return LegoPathActor::m_lastPathStruct
+		deltaUnk0x70 = m_lastPathStruct - userActor->GetLastPathStruct();
 	}
 	else {
 		deltaUnk0x70 = 0;
@@ -456,14 +456,8 @@ inline MxU32 LegoCarRaceActor::VTable0x6c(
 
 							LegoROI* firstROI = (LegoROI*) co->front();
 
-							if (firstROI->FUN_100a9410(
-									p_v1,
-									p_v2,
-									p_f1,
-									p_f2,
-									p_v3,
-									m_collideBox && actor->GetCollideBox()
-								)) {
+							if (firstROI
+									->Intersect(p_v1, p_v2, p_f1, p_f2, p_v3, m_collideBox && actor->GetCollideBox())) {
 								HitActor(actor, TRUE);
 
 								if (actor->HitActor(this, FALSE) < 0) {
@@ -476,14 +470,8 @@ inline MxU32 LegoCarRaceActor::VTable0x6c(
 
 							LegoROI* lastROI = (LegoROI*) co->back();
 
-							if (lastROI->FUN_100a9410(
-									p_v1,
-									p_v2,
-									p_f1,
-									p_f2,
-									p_v3,
-									m_collideBox && actor->GetCollideBox()
-								)) {
+							if (lastROI
+									->Intersect(p_v1, p_v2, p_f1, p_f2, p_v3, m_collideBox && actor->GetCollideBox())) {
 								HitActor(actor, TRUE);
 
 								if (actor->HitActor(this, FALSE) < 0) {
@@ -496,7 +484,7 @@ inline MxU32 LegoCarRaceActor::VTable0x6c(
 						}
 					}
 					else {
-						if (roi->FUN_100a9410(p_v1, p_v2, p_f1, p_f2, p_v3, m_collideBox && actor->GetCollideBox())) {
+						if (roi->Intersect(p_v1, p_v2, p_f1, p_f2, p_v3, m_collideBox && actor->GetCollideBox())) {
 							HitActor(actor, TRUE);
 
 							if (actor->HitActor(this, FALSE) < 0) {
@@ -544,7 +532,7 @@ inline MxU32 LegoJetskiRaceActor::VTable0x6c(
 				LegoROI* roi = actor->GetROI();
 
 				if (roi != NULL && (roi->GetVisibility() || actor->GetCameraFlag())) {
-					if (roi->FUN_100a9410(p_v1, p_v2, p_f1, p_f2, p_v3, m_collideBox && actor->GetCollideBox())) {
+					if (roi->Intersect(p_v1, p_v2, p_f1, p_f2, p_v3, m_collideBox && actor->GetCollideBox())) {
 						HitActor(actor, TRUE);
 
 						if (actor->HitActor(this, FALSE) < 0) {
