@@ -181,7 +181,7 @@ MxResult Act2Actor::HitActor(LegoPathActor*, MxBool)
 // FUNCTION: LEGO1 0x10018a20
 MxResult Act2Actor::VTable0x9c()
 {
-	if (m_grec && !m_grec->GetBit1()) {
+	if (m_grec && !m_grec->HasPath()) {
 		delete m_grec;
 		m_grec = NULL;
 		return SUCCESS;
@@ -410,7 +410,7 @@ void Act2Actor::FindPath(MxU32 p_location)
 	newDirection = g_brickstrLocations[p_location].m_direction;
 	LegoPathBoundary* newBoundary = m_pathController->GetPathBoundary(g_brickstrLocations[p_location].m_boundary);
 
-	MxResult sts = m_pathController->FUN_10048310(
+	MxResult sts = m_pathController->FindPath(
 		m_grec,
 		m_roi->GetWorldPosition(),
 		m_roi->GetWorldDirection(),

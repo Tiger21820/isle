@@ -345,7 +345,7 @@ MxResult Act3Cop::FUN_10040360()
 		assert(grec);
 
 		MxFloat local34;
-		if (m_pathController->FUN_10048310(
+		if (m_pathController->FindPath(
 				grec,
 				local2c,
 				local20,
@@ -383,7 +383,7 @@ MxResult Act3Cop::FUN_10040360()
 				MxFloat locald8;
 				LegoPathEdgeContainer *local138, *local134, *local140, *local13c; // unused
 
-				if (m_pathController->FUN_10048310(
+				if (m_pathController->FindPath(
 						r2,
 						local2c,
 						local20,
@@ -423,7 +423,7 @@ MxResult Act3Cop::FUN_10040360()
 				MxFloat local100;
 				LegoPathEdgeContainer *local150, *local14c; // unused
 
-				if (m_pathController->FUN_10048310(
+				if (m_pathController->FindPath(
 						grec,
 						local2c,
 						local20,
@@ -510,7 +510,7 @@ MxResult Act3Cop::FUN_10040360()
 // FUNCTION: BETA10 0x1001942c
 MxResult Act3Cop::VTable0x9c()
 {
-	if (m_grec && !m_grec->GetBit1()) {
+	if (m_grec && !m_grec->HasPath()) {
 		delete m_grec;
 		m_grec = NULL;
 		m_lastTime = Timer()->GetTime();
@@ -823,7 +823,7 @@ MxResult Act3Brickster::FUN_100417c0()
 					MxFloat locald8;
 					LegoPathEdgeContainer *local16c, *local168, *local174, *local170; // unused
 
-					if (m_pathController->FUN_10048310(
+					if (m_pathController->FindPath(
 							r2,
 							local28,
 							local20,
@@ -907,7 +907,7 @@ MxResult Act3Brickster::FUN_100417c0()
 			MxFloat local13c;
 			LegoPathEdgeContainer *local1c0, *local1bc; // unused
 
-			if (m_pathController->FUN_10048310(
+			if (m_pathController->FindPath(
 					grec,
 					local28,
 					local20,
@@ -1120,7 +1120,7 @@ void Act3Brickster::SwitchBoundary(LegoPathBoundary*& p_boundary, LegoOrientedEd
 // FUNCTION: BETA10 0x1001b75b
 MxResult Act3Brickster::VTable0x9c()
 {
-	if (m_grec && !m_grec->GetBit1()) {
+	if (m_grec && !m_grec->HasPath()) {
 		delete m_grec;
 		m_grec = NULL;
 		m_lastTime = Timer()->GetTime();
