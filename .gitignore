@@ -6,6 +6,7 @@ Release/
 /.vs
 /.vscode
 /.idea
+/.cache
 .env
 .venv
 env/
@@ -14,9 +15,10 @@ ENV/
 VENV/
 env.bak/
 venv.bak/
-/build/
+/build*
 /build_debug/
 /legobin/
+/legobin
 *.swp
 LEGO1PROGRESS.*
 ISLEPROGRESS.*
@@ -29,3 +31,7 @@ ISLE.EXE
 LEGO1.DLL
 
 .DS_Store
+
+# Local ReproBit run state and transactional staging are never source inputs.
+/.reprobit-state/
+/.reprobit-transactions/

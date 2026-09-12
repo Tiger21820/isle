@@ -5,6 +5,15 @@ cmake_policy(SET CMP0091 NEW)
 
 project(isle CXX)
 
+option(ISLE_PER_OBJECT_PDB "Emit one compiler PDB per object file so MSVC < 12 can compile in parallel" ON)
+if(ISLE_PER_OBJECT_PDB AND CMAKE_CXX_COMPILE_OBJECT MATCHES "/Fd<TARGET_COMPILE_PDB>")
+  string(REPLACE "/Fd<TARGET_COMPILE_PDB>" "/Fd<OBJECT>.pdb"
+         CMAKE_CXX_COMPILE_OBJECT "${CMAKE_CXX_COMPILE_OBJECT}")
+  string(REPLACE "/Fd<TARGET_COMPILE_PDB>" "/Fd<OBJECT>.pdb"
+         CMAKE_C_COMPILE_OBJECT "${CMAKE_C_COMPILE_OBJECT}")
+  message(STATUS "Per-object compiler PDBs enabled: parallel builds are safe")
+endif()
+
 include(CheckCXXSourceCompiles)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
@@ -29,6 +38,10 @@ if (MSVC)
   # Visual C++ 4.2 -> cl version 10.2.0
   if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11.0")
     set(MSVC_FOR_DECOMP TRUE)
+  else()
+    # The decompiled source preserves 1997 semantics where a for-loop
+    # variable leaks into the enclosing scope.
+    add_compile_options("/Zc:forScope-")
   endif()
 endif()
 
@@ -66,8 +79,6 @@ option(ISLE_DECOMP_ASSERT "Assert struct size" ${MSVC_FOR_DECOMP})
 cmake_dependent_option(ISLE_USE_DX5_LIBS "Build with internal DirectX 5 SDK Libraries" ON ISLE_USE_DX5 OFF)
 option(ISLE_BUILD_LEGO1 "Build LEGO1.DLL library" ON)
 option(ISLE_BUILD_BETA10 "Build BETA10.DLL library" OFF)
-option(ISLE_INCLUDE_ENTROPY "Build with entropy.h" OFF)
-option(ISLE_ENTROPY_FILENAME "Entropy header filename" "entropy.h")
 
 if(NOT (ISLE_BUILD_LEGO1 OR ISLE_BUILD_BETA10))
   message(FATAL_ERROR "ISLE_BUILD_LEGO1 AND ISLE_BUILD_BETA10 cannot be both disabled")
@@ -82,7 +93,7 @@ if(ISLE_USE_DX5_LIBS)
 endif()
 
 add_library(Smacker::Smacker STATIC IMPORTED)
-set_property(TARGET Smacker::Smacker PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/3rdparty/smacker/smack.lib")
+set_property(TARGET Smacker::Smacker PROPERTY IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/3rdparty/smacker/smackw32.lib")
 set_property(TARGET Smacker::Smacker PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${PROJECT_SOURCE_DIR}/3rdparty/smacker")
 
 add_library(Vec::Vec INTERFACE IMPORTED)
@@ -101,15 +112,7 @@ function(add_lego_libraries NAME)
   set(SUFFIX "${ARG_SUFFIX}")
 
   add_library(tglrl${ARG_SUFFIX} STATIC
-    LEGO1/tgl/d3drm/renderer.cpp
-    LEGO1/tgl/d3drm/texture.cpp
-    LEGO1/tgl/d3drm/view.cpp
-    LEGO1/tgl/d3drm/device.cpp
-    LEGO1/tgl/d3drm/group.cpp
-    LEGO1/tgl/d3drm/camera.cpp
-    LEGO1/tgl/d3drm/light.cpp
-    LEGO1/tgl/d3drm/meshbuilder.cpp
-    LEGO1/tgl/d3drm/mesh.cpp
+    LEGO1/tgl/d3drm/tglrl40.cpp
   )
   list(APPEND list_targets tglrl${ARG_SUFFIX})
   set_property(TARGET tglrl${ARG_SUFFIX} PROPERTY ARCHIVE_OUTPUT_NAME "tglrl40$<$<CONFIG:Debug>:d>${ARG_SUFFIX}")
@@ -118,7 +121,6 @@ function(add_lego_libraries NAME)
 
   add_library(realtime${ARG_SUFFIX} STATIC
     LEGO1/realtime/orientableroi.cpp
-    LEGO1/realtime/realtime.cpp
     LEGO1/realtime/realtimeview.cpp
   )
   list(APPEND list_targets realtime${ARG_SUFFIX})
@@ -127,10 +129,8 @@ function(add_lego_libraries NAME)
   target_link_libraries(realtime${ARG_SUFFIX} PRIVATE Vec::Vec)
 
   add_library(viewmanager${ARG_SUFFIX} STATIC
-    LEGO1/viewmanager/viewlod.cpp
     LEGO1/viewmanager/viewmanager.cpp
     LEGO1/viewmanager/viewlodlist.cpp
-    LEGO1/viewmanager/viewroi.cpp
   )
   list(APPEND list_targets viewmanager${ARG_SUFFIX})
   set_property(TARGET viewmanager${ARG_SUFFIX} PROPERTY ARCHIVE_OUTPUT_NAME "viewmanager$<$<CONFIG:Debug>:d>${ARG_SUFFIX}")
@@ -158,10 +158,9 @@ function(add_lego_libraries NAME)
   target_link_libraries(roi${ARG_SUFFIX} PRIVATE viewmanager${ARG_SUFFIX} Vec::Vec)
 
   add_library(geom${ARG_SUFFIX} STATIC
-    LEGO1/lego/sources/geom/legoedge.cpp
     LEGO1/lego/sources/geom/legoweedge.cpp
-    LEGO1/lego/sources/geom/legoorientededge.cpp
     LEGO1/lego/sources/geom/legowegedge.cpp
+    LEGO1/lego/sources/misc/legospline.cpp
   )
   list(APPEND list_targets geom${ARG_SUFFIX})
   set_property(TARGET geom${ARG_SUFFIX} PROPERTY ARCHIVE_OUTPUT_NAME "geom$<$<CONFIG:Debug>:d>${ARG_SUFFIX}")
@@ -181,6 +180,7 @@ function(add_lego_libraries NAME)
   target_link_libraries(shape${ARG_SUFFIX} PRIVATE)
 
   add_library(anim${ARG_SUFFIX} STATIC
+    LEGO1/lego/sources/anim/legoanimscene.cpp
     LEGO1/lego/sources/anim/legoanim.cpp
   )
   list(APPEND list_targets anim${ARG_SUFFIX})
@@ -189,7 +189,6 @@ function(add_lego_libraries NAME)
 
   add_library(misc${ARG_SUFFIX} STATIC
     LEGO1/lego/sources/misc/legotexture.cpp
-    LEGO1/lego/sources/misc/legospline.cpp
     LEGO1/lego/sources/misc/legostorage.cpp
     LEGO1/lego/sources/misc/legoimage.cpp
     LEGO1/lego/sources/misc/legocontainer.cpp
@@ -223,8 +222,6 @@ function(add_lego_libraries NAME)
     LEGO1/omni/src/audio/mxsoundmanager.cpp
     LEGO1/omni/src/main/mxmain.cpp
     LEGO1/omni/src/notify/mxactionnotificationparam.cpp
-    LEGO1/omni/src/main/mxomnicreateflags.cpp
-    LEGO1/omni/src/main/mxomnicreateparam.cpp
     LEGO1/omni/src/common/mxobjectfactory.cpp
     LEGO1/omni/src/audio/mxsoundpresenter.cpp
     LEGO1/omni/src/audio/mxwavepresenter.cpp
@@ -237,6 +234,7 @@ function(add_lego_libraries NAME)
     LEGO1/omni/src/common/mxmediapresenter.cpp
     LEGO1/omni/src/common/mxcompositepresenter.cpp
     LEGO1/omni/src/system/mxcriticalsection.cpp
+    LEGO1/define.cpp
     LEGO1/omni/src/common/mxutilities.cpp
     LEGO1/omni/src/common/mxvariabletable.cpp
     LEGO1/omni/src/stream/mxdssubscriber.cpp
@@ -255,7 +253,6 @@ function(add_lego_libraries NAME)
     LEGO1/omni/src/video/mxvideoparamflags.cpp
     LEGO1/omni/src/video/mxvideoparam.cpp
     LEGO1/omni/src/video/mxpalette.cpp
-    LEGO1/omni/src/system/mxscheduler.cpp
     LEGO1/omni/src/system/mxthread.cpp
     LEGO1/omni/src/action/mxdsobject.cpp
     LEGO1/omni/src/event/mxeventmanager.cpp
@@ -285,15 +282,22 @@ function(add_lego_libraries NAME)
     LEGO1/omni/src/stream/mxdsfile.cpp
     LEGO1/omni/src/stream/mxio.cpp
     LEGO1/omni/src/action/mxdsstreamingaction.cpp
-    LEGO1/omni/src/stream/mxramstreamprovider.cpp
-    LEGO1/omni/src/stream/mxdiskstreamprovider.cpp
   )
   list(APPEND list_targets omni${ARG_SUFFIX})
   set_property(TARGET omni${ARG_SUFFIX} PROPERTY ARCHIVE_OUTPUT_NAME "omni$<$<CONFIG:Debug>:d>${ARG_SUFFIX}")
   target_include_directories(omni${ARG_SUFFIX} PRIVATE "${PROJECT_SOURCE_DIR}/LEGO1/omni/include" "${PROJECT_SOURCE_DIR}/LEGO1" "${PROJECT_SOURCE_DIR}/util")
-  target_link_libraries(omni${ARG_SUFFIX} PRIVATE dsound winmm Smacker::Smacker)
+
+  add_library(streamprovider${ARG_SUFFIX} STATIC
+    LEGO1/omni/src/stream/mxramstreamprovider.cpp
+    LEGO1/omni/src/stream/mxdiskstreamprovider.cpp
+  )
+  list(APPEND list_targets streamprovider${ARG_SUFFIX})
+  set_property(TARGET streamprovider${ARG_SUFFIX} PROPERTY ARCHIVE_OUTPUT_NAME "streamprovider$<$<CONFIG:Debug>:d>${ARG_SUFFIX}")
+  target_include_directories(streamprovider${ARG_SUFFIX} PRIVATE "${PROJECT_SOURCE_DIR}/LEGO1/omni/include" "${PROJECT_SOURCE_DIR}/LEGO1" "${PROJECT_SOURCE_DIR}/util")
+  target_link_libraries(omni${ARG_SUFFIX} PRIVATE dsound winmm Smacker::Smacker streamprovider${ARG_SUFFIX})
 
   add_library(${NAME} SHARED
+    LEGO1/res/lego1.rc
     LEGO1/lego/legoomni/src/worlds/score.cpp
     LEGO1/lego/legoomni/src/actors/helicopter.cpp
     LEGO1/lego/legoomni/src/worlds/gasstation.cpp
@@ -306,16 +310,12 @@ function(add_lego_libraries NAME)
     LEGO1/lego/legoomni/src/race/legoracers.cpp
     LEGO1/lego/legoomni/src/race/legoraceactor.cpp
     LEGO1/lego/legoomni/src/common/legostate.cpp
-    LEGO1/lego/legoomni/src/actors/buildingentity.cpp
     LEGO1/lego/legoomni/src/actors/buildings.cpp
     LEGO1/lego/legoomni/src/common/misc.cpp
     LEGO1/lego/legoomni/src/race/legorace.cpp
-    LEGO1/lego/legoomni/src/race/jetskirace.cpp
-    LEGO1/lego/legoomni/src/race/carrace.cpp
     LEGO1/lego/legoomni/src/actors/pizzeria.cpp
     LEGO1/lego/legoomni/src/worlds/elevatorbottom.cpp
     LEGO1/lego/legoomni/src/audio/legoloadcachesoundpresenter.cpp
-    LEGO1/lego/legoomni/src/actors/act2genactor.cpp
     LEGO1/lego/legoomni/src/actors/act2actor.cpp
     LEGO1/lego/legoomni/src/actors/islepathactor.cpp
     LEGO1/lego/legoomni/src/paths/legopathstruct.cpp
@@ -397,12 +397,6 @@ function(add_lego_libraries NAME)
     LEGO1/lego/legoomni/src/worlds/historybook.cpp
     LEGO1/lego/legoomni/src/common/legocharactermanager.cpp
     LEGO1/lego/legoomni/src/actors/jukeboxentity.cpp
-    # We need to get rid of / refactor the below units into existing/other ones
-    LEGO1/main.cpp
-    LEGO1/lego/legoomni/src/entity/legolocations.cpp
-    LEGO1/lego/legoomni/src/common/legoactors.cpp
-    LEGO1/lego/legoomni/src/common/legoplants.cpp
-    LEGO1/define.cpp
   )
   list(APPEND list_targets ${NAME})
 
@@ -431,15 +425,14 @@ function(add_lego_libraries NAME)
     geom${ARG_SUFFIX}
     mxdirectx${ARG_SUFFIX}
     anim${ARG_SUFFIX}
+    shape${ARG_SUFFIX}
     tglrl${ARG_SUFFIX}
     realtime${ARG_SUFFIX}
     viewmanager${ARG_SUFFIX}
     roi${ARG_SUFFIX}
     3dmanager${ARG_SUFFIX}
     omni${ARG_SUFFIX}
-    shape${ARG_SUFFIX}
     Vec::Vec
-    dxguid
   )
 
   foreach(tgt IN LISTS list_targets)
@@ -458,8 +451,12 @@ endfunction()
 
 set(lego1_link_libraries )
 if (ISLE_USE_SMARTHEAP)
-  list(APPEND lego1_link_libraries SmartHeap::SmartHeap libcmt)
+  list(APPEND lego1_link_libraries SmartHeap::SmartHeap libcmt oldnames)
 endif()
+
+list(APPEND lego1_link_libraries winmm dinput dsound ddraw kernel32 user32 gdi32 d3drm)
+
+list(APPEND lego1_link_libraries dxguid)
 
 if(ISLE_BUILD_LEGO1)
   add_lego_libraries(lego1
@@ -481,6 +478,8 @@ if(ISLE_BUILD_BETA10)
     OUT_TARGETS beta10_targets
   )
   reccmp_add_target(beta10 ID BETA10)
+
+  target_link_libraries(beta10 PRIVATE dxguid)
 
   # Enable `#ifdef BETA10` conditions
   target_compile_definitions(beta10 PRIVATE BETA10)
@@ -505,13 +504,15 @@ if (ISLE_BUILD_APP)
     target_link_libraries(isle PRIVATE SmartHeap::SmartHeap)
   endif()
 
-  # Link DSOUND, WINMM, and LEGO1
-  target_link_libraries(isle PRIVATE dsound winmm)
+  # Link DSOUND, WINMM, and LEGO1.
+  target_link_libraries(isle PRIVATE winmm advapi32 gdi32 user32 dsound)
   if(ISLE_BUILD_LEGO1)
     target_link_libraries(isle PRIVATE lego1)
   else()
     target_link_libraries(isle PRIVATE beta10)
   endif()
+  string(REPLACE "kernel32.lib" "" CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES}")
+  string(REPLACE "kernel32.lib" "" CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES}")
 
   # Make sure filenames are ALL CAPS
   set_property(TARGET isle PROPERTY OUTPUT_NAME ISLE)
@@ -524,7 +525,6 @@ if (ISLE_BUILD_CONFIG)
     LEGO1/mxdirectx/legodxinfo.cpp
     CONFIG/config.cpp
     CONFIG/ConfigCommandLineInfo.cpp
-    CONFIG/AboutDlg.cpp
     CONFIG/MainDlg.cpp
     CONFIG/detectdx5.cpp
     CONFIG/StdAfx.cpp
@@ -537,7 +537,7 @@ if (ISLE_BUILD_CONFIG)
     target_link_libraries(config PRIVATE DirectX5::DirectX5)
   endif()
   target_compile_definitions(config PRIVATE DIRECT3D_VERSION=0x500)
-  target_link_libraries(config PRIVATE ddraw dxguid)
+  target_link_libraries(config PRIVATE ddraw dsound dxguid)
   set_property(TARGET config PROPERTY OUTPUT_NAME "CONFIG")
   set_property(TARGET config PROPERTY SUFFIX ".EXE")
   set_property(TARGET config PROPERTY MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>DLL)
@@ -592,20 +592,7 @@ if (MSVC_FOR_DECOMP)
 
   if (ISLE_BUILD_CONFIG)
     target_link_options(config PRIVATE "/OPT:REF")
-    target_link_libraries(config PRIVATE mfc42)
-  endif()
-
-  if (ISLE_INCLUDE_ENTROPY)
-    message(STATUS "Using entropy file: ${ISLE_ENTROPY_FILENAME}")
-    foreach(tgt IN LISTS lego1_targets beta10_targets)
-      target_compile_options(${tgt} PRIVATE /FI${PROJECT_SOURCE_DIR}/${ISLE_ENTROPY_FILENAME})
-    endforeach()
-    if (TARGET isle)
-      target_compile_options(isle PRIVATE /FI${PROJECT_SOURCE_DIR}/${ISLE_ENTROPY_FILENAME})
-    endif()
-    if (TARGET config)
-      target_compile_options(config PRIVATE /FI${PROJECT_SOURCE_DIR}/${ISLE_ENTROPY_FILENAME})
-    endif()
+    target_link_libraries(config PRIVATE mfc42 msvcrt kernel32)
   endif()
 
   # Setting the MSVC_RUNTIME_LIBRARY for all libraries as well as `lego1` produces the results
@@ -637,9 +624,19 @@ if (MSVC_FOR_DECOMP)
   set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "/incremental:no /debug")
   set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "/incremental:no")
 
+  if(REPROBIT_TERMINAL)
+    foreach(_cfg "" _DEBUG _RELEASE _RELWITHDEBINFO _MINSIZEREL)
+      foreach(_kind EXE SHARED STATIC)
+        string(REPLACE "/debug" "" CMAKE_${_kind}_LINKER_FLAGS${_cfg}
+               "${CMAKE_${_kind}_LINKER_FLAGS${_cfg}}")
+      endforeach()
+    endforeach()
+    message(STATUS "REPROBIT_TERMINAL: linking without /debug (no DEBUG data directory); /Zi retained so codegen is unchanged")
+  endif()
+
   # Older MSVC versions don't support building in parallel.
   # Force non-parallel builds of isle and lego1 by putting them in a pool with 1 available job.
-  if (CMAKE_CXX_COMPILER_ID VERSION_LESS 12)
+  if (CMAKE_CXX_COMPILER_ID VERSION_LESS 12 AND NOT ISLE_PER_OBJECT_PDB)
     foreach(tgt IN LISTS lego1_targets beta10_targets)
       set_property(GLOBAL APPEND PROPERTY JOB_POOLS "msvc_${tgt}=1")
       set_property(TARGET ${tgt} PROPERTY JOB_POOL_COMPILE "msvc_${tgt}")
@@ -656,6 +653,18 @@ if (MSVC_FOR_DECOMP)
       set_property(TARGET config PROPERTY JOB_POOL_LINK "msvc_config")
     endif()
   endif()
+endif()
+
+if(DEFINED REPROBIT_PROJECT_PLAN AND NOT REPROBIT_PROJECT_PLAN STREQUAL "")
+  if(NOT DEFINED REPROBIT_CMAKE_MODULE OR REPROBIT_CMAKE_MODULE STREQUAL "")
+    message(FATAL_ERROR "REPROBIT_CMAKE_MODULE is required with REPROBIT_PROJECT_PLAN")
+  endif()
+  if(NOT EXISTS "${REPROBIT_CMAKE_MODULE}" OR
+     NOT EXISTS "${REPROBIT_PROJECT_PLAN}")
+    message(FATAL_ERROR "ReproBit CMake module or generated project plan is absent")
+  endif()
+  include("${REPROBIT_CMAKE_MODULE}")
+  include("${REPROBIT_PROJECT_PLAN}")
 endif()
 
 find_program(CLANGFORMAT_BIN NAMES clang-format)
